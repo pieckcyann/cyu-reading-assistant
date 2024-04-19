@@ -1,11 +1,14 @@
-import { MarkdownPostProcessorContext, Plugin } from 'obsidian';
+import { Editor, MarkdownPostProcessorContext, MarkdownView, Plugin } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
 	ReadAssistPluginSettings,
 	ReadAssistSettingTab
 } from "settings/Settings"
 import ReadAssistance from "./core/ReadAssist"
-import { addComment } from 'AddComment'
+import {
+	addCommentForSource,
+	addCommentForPreview
+} from 'AddComment'
 
 export default class ReadAssistPlugin extends Plugin {
 	public settings: ReadAssistPluginSettings
@@ -35,31 +38,58 @@ export default class ReadAssistPlugin extends Plugin {
 				}
 			}
 		);
+		this.registerCommands();
 
-		this.addCommand({
-			id: "add-word-comment",
-			name: "为单词添加注释块",
-			callback: () => { addComment(false) },
-			hotkeys: [
-				{
-					modifiers: ['Ctrl', 'Shift'],
-					key: 'C'
-				}
-			]
-		});
-
-		this.addCommand({
-			id: "add-sentence-comment",
-			name: "为句子添加注释块",
-			callback: () => { addComment(true) },
-			hotkeys: [
-				{
-					modifiers: ['Ctrl', 'Alt'],
-					key: 'C'
-				}
-			]
-		});
 	}
+
+	registerCommands() {
+		this.addCommand({
+			id: "add-word-comment-in-source",
+			name: "在源码模式下：为单词添加注释块",
+			hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'C' }],
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				addCommentForSource({
+					containerTag: 'label',
+					containerTagClass: '',
+					editor: editor
+				})
+			}
+		})
+
+		this.addCommand({
+			id: "add-sentence-comment-in-source",
+			name: "在源码模式下：为句子添加注释块",
+			hotkeys: [{ modifiers: ['Ctrl', 'Alt'], key: 'C' }],
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				addCommentForSource({
+					containerTag: 'label',
+					containerTagClass: ' class="sentence"',
+					editor: editor
+				})
+			}
+		})
+
+		this.addCommand({
+			id: "add-word-comment-in-preview",
+			name: "在预览模式下：为单词添加注释块",
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				addCommentForPreview({
+					containerTag: 'label'
+				})
+			}
+		})
+
+		this.addCommand({
+			id: "add-sentence-comment-in-preview",
+			name: "在预览模式下：为句子添加注释块",
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				addCommentForPreview({
+					containerTag: 'label class="sentence"'
+				})
+			}
+		})
+	}
+
 
 	word_count_display() {
 		// 获取第一个 h1 标题元素

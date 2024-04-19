@@ -20,8 +20,6 @@ export default class ReadAssistance extends MarkdownRenderChild {
     async onload() {
         await this.setForInputs()
         this.registerEvents()
-
-
     }
 
     registerEvents() {
@@ -77,7 +75,10 @@ export default class ReadAssistance extends MarkdownRenderChild {
                     event.preventDefault()
                     event.stopPropagation()
                     if (checkboxInput) { checkboxInput.checked = !checkboxInput.checked; }
-                    new Notice(`${label.innerText}`);
+                    const del = label.querySelector('del')
+                    if (del)
+                        new Notice(`单词原型：${del.getAttribute('data-prototype')}`)
+
                 })
                 // 右键点击复制
                 label.addEventListener('contextmenu', (event) => {
@@ -88,40 +89,43 @@ export default class ReadAssistance extends MarkdownRenderChild {
                 })
 
                 // 添加星标span
-                if (label.classList.contains('sentence')) return
-
-                const textContent = (label.textContent ?? '').toLowerCase()
-                const inputValue = (textInput.value.split(' ')[0]).toLowerCase()
-                const firstLetter1 = textContent.charAt(0).toLowerCase()
-                const firstLetter2 = inputValue.charAt(0).toLowerCase()
-                const isValidInput = /^[a-zA-Z]+$/.test(inputValue)
-
-                const wordExists = async (word: string, firstLetter: string) => {
-                    return await WordChecker(app, this.pathToWordSets, word, firstLetter)
-                };
-
-                if (isValidInput) {
-                    const word1Exists = await wordExists(textContent, firstLetter1)
-                    const word2Exists = await wordExists(inputValue, firstLetter2)
-
-                    if (word1Exists || word2Exists) {
-                        console.log(`marked: ${textContent} -> ${word1Exists}`)
-                        console.log(`marked: ${inputValue} -> ${word2Exists}`)
-                        const starSpan = document.createElement('span')
-                        label.appendChild(starSpan)
-                    }
-                } else {
-                    const word1Exists = await wordExists(textContent, firstLetter1)
-
-                    if (word1Exists) {
-                        console.log(`marked: ${textContent} -> ${word1Exists}`)
-                        const starSpan = document.createElement('span')
-                        label.appendChild(starSpan)
-                    }
-                }
-
+                await this.checkWordMarked(label, textInput);
             }
         });
+    }
+
+    async checkWordMarked(label: HTMLLabelElement, textInput: HTMLInputElement) {
+        if (label.classList.contains('sentence')) return
+
+        const textContent = (label.textContent ?? '').toLowerCase()
+        const inputValue = (textInput.value.split(' ')[0]).toLowerCase()
+        const firstLetter1 = textContent.charAt(0).toLowerCase()
+        const firstLetter2 = inputValue.charAt(0).toLowerCase()
+        const isValidInput = /^[a-zA-Z]+$/.test(inputValue)
+
+        const wordExists = async (word: string, firstLetter: string) => {
+            return await WordChecker(app, this.pathToWordSets, word, firstLetter)
+        };
+
+        if (isValidInput) {
+            const word1Exists = await wordExists(textContent, firstLetter1)
+            const word2Exists = await wordExists(inputValue, firstLetter2)
+
+            if (word1Exists || word2Exists) {
+                console.log(`marked: ${textContent} -> ${word1Exists}`)
+                console.log(`marked: ${inputValue} -> ${word2Exists}`)
+                const starSpan = document.createElement('span')
+                label.appendChild(starSpan)
+            }
+        } else {
+            const word1Exists = await wordExists(textContent, firstLetter1)
+
+            if (word1Exists) {
+                console.log(`marked: ${textContent} -> ${word1Exists}`)
+                const starSpan = document.createElement('span')
+                label.appendChild(starSpan)
+            }
+        }
     }
 
     async setForInputs() {
@@ -157,13 +161,23 @@ export default class ReadAssistance extends MarkdownRenderChild {
     private onInputKeyUp = async (event: KeyboardEvent) => {
         const textinput = event.target as HTMLInputElement
         const label = textinput.parentElement ?? null
-        const labelText = (label?.textContent ?? '').trim();
-        const oldValue = textinput.defaultValue;
-        const newValue = textinput.value;
+        let labelText = (label?.textContent ?? '').trim()
+        const oldValue = textinput.defaultValue
+        const newValue = textinput.value
 
         if (label && event.key === 'Enter' && newValue.trim() !== oldValue.trim()) {
             event.preventDefault()
             event.stopPropagation()
+
+            const del = label.querySelector('del')
+            if (del) {
+                const delTetxt = del.innerText
+                labelText = labelText.replace(
+                    delTetxt,
+                    `<del data-prototype="${del.getAttribute('data-prototype')}">${delTetxt}</del>`
+                );
+            }
+
             await this.updateInputValueInFile(
                 labelText,
                 oldValue,
@@ -217,7 +231,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 
         let regex = getRegexForLabel(labelText, oldValue, labelClass);
         const linkRegex = /\[([^\]]+)\]\(\)/g
-        const footnoteRegex = /\[\^(\d+)\]/g
+        // const footnoteRegex = /\[\^(\d+)\]/g
 
         if ((fileContent.match(regex) || []).length < 1) {
             let linkMatch;
@@ -225,19 +239,18 @@ export default class ReadAssistance extends MarkdownRenderChild {
                 const linkText = linkMatch[1];
                 if (labelText.includes(linkText)) {
                     labelText = labelText.replace(linkText, `[${linkText}]()`);
-                    // new Notice(labelText);
                 }
             }
 
             // 检测 footnote 格式并替换
-            let footnoteMatch;
-            while ((footnoteMatch = footnoteRegex.exec(fileContent)) !== null) {
-                const footnoteText = footnoteMatch[1];
-                if (labelText.includes(footnoteText)) {
-                    labelText = labelText.replace(footnoteText, `[^${footnoteText}]`);
-                    new Notice(footnoteText);
-                }
-            }
+            // let footnoteMatch;
+            // while ((footnoteMatch = footnoteRegex.exec(fileContent)) !== null) {
+            //     const footnoteText = footnoteMatch[1];
+            //     if (labelText.includes(footnoteText)) {
+            //         labelText = labelText.replace(footnoteText, `[^${footnoteText}]`);
+            //         new Notice(footnoteText);
+            //     }
+            // }
 
             regex = getRegexForLabel(labelText, oldValue, labelClass);
         }
@@ -265,15 +278,15 @@ export default class ReadAssistance extends MarkdownRenderChild {
         function showNoticeForMatchCount(fileContent: string, regex: RegExp): void {
             const matchCount = (fileContent.match(regex) || []).length
             if (matchCount === 1) {
-                new Notice(`笔记内容已修改`)
+                new Notice(`提示：笔记内容已修改`)
             } else if (matchCount > 1) {
-                new Notice(`⚠ 警告：笔记中有重复的地方 ${matchCount} 处`)
+                new Notice(`提醒：笔记中有重复的地方 ${matchCount} 处`)
             } else if (matchCount < 1) {
-                new Notice(`🚨 报错：未找到对应的label标签文本`)
+                new Notice(`警告：未找到对应的label标签文本`)
             }
         }
 
-        // 加反斜杠变为特殊字符
+        // 替换：加反斜杠变为特殊字符
         function escapeRegExp(str: string): string {
             return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }

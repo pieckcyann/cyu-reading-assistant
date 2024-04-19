@@ -1,8 +1,40 @@
-import { Notice } from 'obsidian';
+import { Editor, EditorPosition, Notice } from 'obsidian';
 import { PromptModal } from "./PromptModal"
 import { TemplaterError } from "utils/Error"
+import escapeHTML from 'escape-html';
 
-export async function addComment(isSentence: boolean): Promise<void> {
+export function addCommentForSource({
+    containerTag,
+    containerTagClass,
+    editor
+}: {
+    containerTag: string,
+    containerTagClass: string,
+    editor: Editor
+}) {
+    const selection = editor.getSelection();
+    if (selection.contains('\n')) return;
+
+    const escapedSelection = escapeHTML(selection);
+    const replacement = `<${containerTag}${containerTagClass}>${escapedSelection}<input value="comments"></${containerTag}>`;
+
+    if (replacement) {
+        const currentCursor = editor.getCursor("from");
+        const placeholderPositionStartCh = currentCursor.ch + escapedSelection.length + containerTag.length + containerTagClass.length + 16;
+        const placeholderPositionEndCh = placeholderPositionStartCh + 8;
+        const placeholderPositionStart: EditorPosition = { line: currentCursor.line, ch: placeholderPositionStartCh };
+        const placeholderPositionEnd: EditorPosition = { line: currentCursor.line, ch: placeholderPositionEndCh };
+        editor.replaceSelection(replacement, selection);
+        editor.setSelection(placeholderPositionStart, placeholderPositionEnd);
+    }
+}
+
+export async function addCommentForPreview({
+    containerTag
+}: {
+    containerTag: string
+}
+) {
     const labelText = document.getSelection()?.toString().trim()
     if (!labelText) return
 
@@ -15,15 +47,27 @@ export async function addComment(isSentence: boolean): Promise<void> {
     prompt.openAndGetValue(
         async (value: string) => {
             const commentText = value
-            await addCommentInFile(labelText, commentText, isSentence)
+            await addCommentInFile({
+                labelText: labelText,
+                commentText: commentText,
+                containerTag: containerTag
+            })
         },
-        (reason?: TemplaterError) => {
+        (_?: TemplaterError) => {
             new Notice('未输入注释内容!')
         }
     );
 }
 
-async function addCommentInFile(labelText: string, commentText: string, isSentence: boolean) {
+async function addCommentInFile({
+    labelText,
+    commentText,
+    containerTag
+}: {
+    labelText: string,
+    commentText: string,
+    containerTag: string
+}) {
     if (!labelText.trim() || !commentText.trim()) return
 
     const file = this.app.workspace.getActiveFile()
@@ -38,12 +82,11 @@ async function addCommentInFile(labelText: string, commentText: string, isSenten
 
     const startIndex = fileContent.indexOf(articleContent)
     const endIndex = startIndex + articleContent.length
-    const labelClass = isSentence ? ' class="sentence"' : ''
 
     const replaceLabel = (text: string) => {
         return text.replace(
             labelText,
-            `<label${labelClass}>${labelText}<input value="${commentText}"></label>`
+            `<${containerTag}>${labelText}<input value="${commentText}"></${containerTag}>`
         )
     }
 
