@@ -72,7 +72,7 @@ export default class ReadAssistPlugin extends Plugin {
 		this.addCommand({
 			id: "add-word-comment-in-preview",
 			name: "在预览模式下：为单词添加注释块",
-			editorCallback: (editor: Editor, view: MarkdownView) => {
+			callback: () => {
 				addCommentForPreview({
 					containerTag: 'label'
 				})
@@ -82,7 +82,7 @@ export default class ReadAssistPlugin extends Plugin {
 		this.addCommand({
 			id: "add-sentence-comment-in-preview",
 			name: "在预览模式下：为句子添加注释块",
-			editorCallback: (editor: Editor, view: MarkdownView) => {
+			callback: () => {
 				addCommentForPreview({
 					containerTag: 'label class="sentence"'
 				})
