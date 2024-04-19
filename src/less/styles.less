@@ -1,0 +1,171 @@
+@comment-bg-blue: 0, 114, 208;
+@comment-bg-red: 199, 43, 108;
+@comment-bg-yellow: 255, 147, 0;
+
+@label-opacity-blue: 0.04;
+@label-opacity-red: 0.06;
+@comment-opacity-blue: 1;
+@comment-opacity-red: 1;
+@comment-text-color: white;
+
+
+h1 label,
+.markdown-rendered h1 label {
+    font-weight: var(--h1-weight);
+}
+
+strong label,
+.markdown-rendered strong label {
+    font-weight: var(--bold-weight);
+    color: var(--bold-color);
+}
+
+label {
+    padding: 1px;
+    border: none;
+    cursor: pointer;
+    // user-select: none;
+    position: relative;
+    font-weight: normal;
+    white-space: normal;
+    word-wrap: break-word;
+    color: var(--text-normal);
+    border-bottom: 1px solid rgba(@comment-bg-blue, 1);
+    background-color: rgba(@comment-bg-blue, @label-opacity-blue);
+
+    &:active {
+        background-color: rgba(@comment-bg-blue, 0.5);
+    }
+
+    span:not(:has(*))::before {
+        content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='0.7em' height='0.7em' viewBox='0 0 48 48'%3E%3Cpath fill='%23efefe8' stroke='%230072d0' stroke-linejoin='round' stroke-width='4' d='M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z'/%3E%3C/svg%3E");
+        position: absolute;
+        top: -19px;
+        left: -9px;
+    }
+
+    del {
+        text-decoration: none;
+        background-color: #f9f5e9;
+    }
+
+    input {
+        &[type="checkbox"] {
+            display: none;
+
+            &:checked+[type="text"] {
+                display: inline-block;
+            }
+        }
+
+        &[type="text"] {
+            letter-spacing: 0.1px;
+            color: @comment-text-color;
+            z-index: 1;
+            display: none;
+            text-align: left;
+            border-radius: 6px;
+            position: absolute;
+            --input-height: 38px;
+            --font-ui-small: 16px;
+            border: 2px solid rgb(@comment-bg-blue);
+            background-color: rgba(@comment-bg-blue, @comment-opacity-blue);
+
+            --size-4-2: 14px;
+            padding: var(--size-4-1) var(--size-4-2);
+
+            bottom: 110%;
+            left: 50%;
+            // // 居中
+            // top: 190%;
+            // left: 50%;
+            // transform: translate(-50%, -50%);
+            transition: color 0.1s ease-in-out, width 0.2s ease-in-out;
+
+            &:hover {
+                border: 2px solid rgb(@comment-bg-blue);
+            }
+
+            &:focus {
+                box-shadow: none;
+                color: rgb(@comment-bg-blue);
+                background-color: var(--bg1);
+                border: 2px solid rgb(@comment-bg-blue);
+                border-bottom: 3px solid rgb(@comment-bg-blue);
+                transition: color 0.1s ease-in-out, width 0.1s ease-in-out;
+                // transform: translate(-50%+8.5px, -50%) 0.19s ease-in-out;
+            }
+        }
+    }
+}
+
+// 句子
+label.sentence {
+    background-color: rgba(@comment-bg-red, @label-opacity-red);
+    border-bottom: 1px solid rgba(@comment-bg-red, 1);
+
+    // !
+    &:active:not(:has(label:active)) {
+        background-color: rgba(@comment-bg-red, 0.5);
+    }
+
+    &>input {
+        &[type="text"] {
+            background-color: rgba(@comment-bg-red, @comment-opacity-red);
+            border: 2px solid rgb(@comment-bg-red);
+            color: @comment-text-color;
+            bottom: 110%;
+            left: 50%;
+
+            &:focus {
+                color: rgb(@comment-bg-red);
+                background-color: var(--bg1);
+                border: 2px solid rgb(@comment-bg-red);
+                border-bottom: 3px solid rgb(@comment-bg-red);
+            }
+        }
+    }
+
+    label {
+        background-color: #ecefe8;
+
+        &:active {
+            background-color: rgba(@comment-bg-blue, 0.5);
+        }
+
+        input {
+            &[type="text"] {
+                color: @comment-text-color;
+                background-color: rgba(@comment-bg-blue, 1);
+
+                top: -30px;
+                left: 10%;
+            }
+
+            &:focus {
+                color: rgb(@comment-bg-blue);
+                background-color: var(--bg1);
+            }
+        }
+    }
+}
+
+/**
+ * @deprecated This styles is deprecated for the time being
+ */
+// 短语
+label.phrases {
+    background-color: rgba(@comment-bg-yellow, 0.12);
+    border-bottom: 1px solid rgba(@comment-bg-yellow, 1);
+
+    &:active:not(:has(label:active)) {
+        background-color: rgba(@comment-bg-yellow, 0.5);
+    }
+
+    input {
+        &[type="text"] {
+            color: @comment-text-color;
+            background-color: rgba(@comment-bg-yellow, 1);
+        }
+    }
+}

@@ -1,8 +1,119 @@
-/*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
+h1 label,
+.markdown-rendered h1 label {
+  font-weight: var(--h1-weight);
+}
+strong label,
+.markdown-rendered strong label {
+  font-weight: var(--bold-weight);
+  color: var(--bold-color);
+}
+label {
+  padding: 1px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  font-weight: normal;
+  white-space: normal;
+  word-wrap: break-word;
+  color: var(--text-normal);
+  border-bottom: 1px solid rgba(0, 114, 208, 1);
+  background-color: rgba(0, 114, 208, 0.04);
+}
+label:active {
+  background-color: rgba(0, 114, 208, 0.5);
+}
+label span:not(:has(*))::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='0.7em' height='0.7em' viewBox='0 0 48 48'%3E%3Cpath fill='%23efefe8' stroke='%230072d0' stroke-linejoin='round' stroke-width='4' d='M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z'/%3E%3C/svg%3E");
+  position: absolute;
+  top: -19px;
+  left: -9px;
+}
+label del {
+  text-decoration: none;
+  background-color: #f9f5e9;
+}
+label input[type="checkbox"] {
+  display: none;
+}
+label input[type="checkbox"]:checked + [type="text"] {
+  display: inline-block;
+}
+label input[type="text"] {
+  letter-spacing: 0.1px;
+  color: white;
+  z-index: 1;
+  display: none;
+  text-align: left;
+  border-radius: 6px;
+  position: absolute;
+  --input-height: 38px;
+  --font-ui-small: 16px;
+  border: 2px solid rgb(0, 114, 208);
+  background-color: rgba(0, 114, 208, 1);
+  --size-4-2: 14px;
+  padding: var(--size-4-1) var(--size-4-2);
+  bottom: 110%;
+  left: 50%;
+  transition: color 0.1s ease-in-out, width 0.2s ease-in-out;
+}
+label input[type="text"]:hover {
+  border: 2px solid rgb(0, 114, 208);
+}
+label input[type="text"]:focus {
+  box-shadow: none;
+  color: rgb(0, 114, 208);
+  background-color: var(--bg1);
+  border: 2px solid rgb(0, 114, 208);
+  border-bottom: 3px solid rgb(0, 114, 208);
+  transition: color 0.1s ease-in-out, width 0.1s ease-in-out;
+}
+label.sentence {
+  background-color: rgba(199, 43, 108, 0.06);
+  border-bottom: 1px solid rgba(199, 43, 108, 1);
+}
+label.sentence:active:not(:has(label:active)) {
+  background-color: rgba(199, 43, 108, 0.5);
+}
+label.sentence > input[type="text"] {
+  background-color: rgba(199, 43, 108, 1);
+  border: 2px solid rgb(199, 43, 108);
+  color: white;
+  bottom: 110%;
+  left: 50%;
+}
+label.sentence > input[type="text"]:focus {
+  color: rgb(199, 43, 108);
+  background-color: var(--bg1);
+  border: 2px solid rgb(199, 43, 108);
+  border-bottom: 3px solid rgb(199, 43, 108);
+}
+label.sentence label {
+  background-color: #ecefe8;
+}
+label.sentence label:active {
+  background-color: rgba(0, 114, 208, 0.5);
+}
+label.sentence label input[type="text"] {
+  color: white;
+  background-color: rgba(0, 114, 208, 1);
+  top: -30px;
+  left: 10%;
+}
+label.sentence label input:focus {
+  color: rgb(0, 114, 208);
+  background-color: var(--bg1);
+}
+/**
+ * @deprecated This styles is deprecated for the time being
+ */
+label.phrases {
+  background-color: rgba(255, 147, 0, 0.12);
+  border-bottom: 1px solid rgba(255, 147, 0, 1);
+}
+label.phrases:active:not(:has(label:active)) {
+  background-color: rgba(255, 147, 0, 0.5);
+}
+label.phrases input[type="text"] {
+  color: white;
+  background-color: rgba(255, 147, 0, 1);
+}
