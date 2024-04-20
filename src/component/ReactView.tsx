@@ -1,9 +1,17 @@
-import * as React from "react";
+import React from 'react'
 
-export function createReactView(className: string) {
-	return <ReactView className={className} />;
+interface ReactViewProps {
+	className?: string
+	textContent?: string // 添加问号表示 textContent 是可选的
 }
 
-function ReactView({ className }: { className: string }) {
-	return <h4 className={className}>Hello, React!</h4>;
+export const ReactView: React.FC<ReactViewProps> = ({
+	className = 'RA-count-display',
+	textContent = 'Hello, React!',
+}) => {
+	return <span className={className}>{textContent}</span>
 }
+
+// export function createReactView(className: string) {
+// 	return <ReactView className={className} />;
+// }

@@ -1,7 +1,7 @@
-import { Editor, EditorPosition, Notice } from 'obsidian';
+import { Editor, EditorPosition, Notice } from 'obsidian'
 import { PromptModal } from "./PromptModal"
 import { TemplaterError } from "utils/Error"
-import escapeHTML from 'escape-html';
+// import escapeHTML from 'escape-html';
 
 export function addCommentForSource({
     containerTag,
@@ -12,29 +12,31 @@ export function addCommentForSource({
     containerTagClass: string,
     editor: Editor
 }) {
-    const selection = editor.getSelection();
-    if (selection.contains('\n')) return;
+    const selection = editor.getSelection()
+    if (selection.contains('\n')) return
 
-    const escapedSelection = escapeHTML(selection);
-    const replacement = `<${containerTag}${containerTagClass}>${escapedSelection}<input value="comments"></${containerTag}>`;
+    // const escapedSelection = escapeHTML(selection);
+    const escapedSelection = selection
+    const replacement = `<${containerTag}${containerTagClass}>${escapedSelection}<input value="comments"></${containerTag}>`
 
     if (replacement) {
-        const currentCursor = editor.getCursor("from");
-        const placeholderPositionStartCh = currentCursor.ch + escapedSelection.length + containerTag.length + containerTagClass.length + 16;
-        const placeholderPositionEndCh = placeholderPositionStartCh + 8;
-        const placeholderPositionStart: EditorPosition = { line: currentCursor.line, ch: placeholderPositionStartCh };
-        const placeholderPositionEnd: EditorPosition = { line: currentCursor.line, ch: placeholderPositionEndCh };
-        editor.replaceSelection(replacement, selection);
-        editor.setSelection(placeholderPositionStart, placeholderPositionEnd);
+        const currentCursor = editor.getCursor("from")
+        const placeholderPositionStartCh = currentCursor.ch + escapedSelection.length + containerTag.length + containerTagClass.length + 16
+        const placeholderPositionEndCh = placeholderPositionStartCh + 8
+        const placeholderPositionStart: EditorPosition = { line: currentCursor.line, ch: placeholderPositionStartCh }
+        const placeholderPositionEnd: EditorPosition = { line: currentCursor.line, ch: placeholderPositionEndCh }
+        editor.replaceSelection(replacement, selection)
+        editor.setSelection(placeholderPositionStart, placeholderPositionEnd)
     }
 }
 
 export async function addCommentForPreview({
-    containerTag
+    containerTag,
+    containerTagClass
 }: {
-    containerTag: string
-}
-) {
+    containerTag: string,
+    containerTagClass: string
+}) {
     const labelText = document.getSelection()?.toString().trim()
     if (!labelText) return
 
@@ -42,13 +44,14 @@ export async function addCommentForPreview({
         "这里输入注释内容：",
         "",
         false
-    );
+    )
 
     prompt.openAndGetValue(
         async (value: string) => {
             const commentText = value
             await addCommentInFile({
                 labelText: labelText,
+                containerTagClass: containerTagClass,
                 commentText: commentText,
                 containerTag: containerTag
             })
@@ -56,15 +59,17 @@ export async function addCommentForPreview({
         (_?: TemplaterError) => {
             new Notice('未输入注释内容!')
         }
-    );
+    )
 }
 
 async function addCommentInFile({
     labelText,
+    containerTagClass,
     commentText,
     containerTag
 }: {
     labelText: string,
+    containerTagClass: string,
     commentText: string,
     containerTag: string
 }) {
@@ -86,16 +91,16 @@ async function addCommentInFile({
     const replaceLabel = (text: string) => {
         return text.replace(
             labelText,
-            `<${containerTag}>${labelText}<input value="${commentText}"></${containerTag}>`
+            `<${containerTag}${containerTagClass}>${labelText}<input value="${commentText}"></${containerTag}>`
         )
     }
 
     const newFileContent = fileContent.substring(0, startIndex) +
         replaceLabel(fileContent.substring(startIndex, endIndex)) +
-        fileContent.substring(endIndex);
+        fileContent.substring(endIndex)
 
     if (newFileContent !== fileContent) {
-        await this.app.vault.modify(file, newFileContent);
+        await this.app.vault.modify(file, newFileContent)
         new Notice(`提示：已修改`)
     } else {
         new Notice(`提示：未找到文本！`)
@@ -107,8 +112,8 @@ async function addCommentInFile({
     function extractArticle(input: string): string | null {
         // const regex = /^#\s+(.+?)(?=\n\n^#\s+)/ms
         // const regex = /^#\s+(.+?)(?=\n\n(?:^#\s+|$))/ms
-        const regex = /^#{1,6}\s+(.+?)(?=\n\n(?:^#{1,6}\s+|$))/ms
+        const regex = /^#{1,6}\s+(.+?)(?=\n\n(?:^#{1}\s+|$))/ms
         const match = input.match(regex)
-        return match ? match[1] : null;
+        return match ? match[1] : null
     }
 }
