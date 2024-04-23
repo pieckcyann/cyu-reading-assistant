@@ -1,12 +1,11 @@
-import ReadAssistPlugin from "main";
-import { PluginSettingTab, Setting } from "obsidian";
-import { FolderSuggest } from "./suggesters/FolderSuggester";
+import ReadAssistPlugin from "main"
+import { PluginSettingTab, Setting } from "obsidian"
+import { FolderSuggest } from "./suggesters/FolderSuggester"
 
 export interface ReadAssistPluginSettings {
-    mySetting: string;
+    mySetting: string
     articles_folder: string,
-    user_scripts_folder: string;
-
+    user_scripts_folder: string
 }
 
 export const DEFAULT_SETTINGS: ReadAssistPluginSettings = {
@@ -18,14 +17,14 @@ export const DEFAULT_SETTINGS: ReadAssistPluginSettings = {
 
 export class ReadAssistSettingTab extends PluginSettingTab {
     constructor(private plugin: ReadAssistPlugin) {
-        super(app, plugin);
+        super(app, plugin)
     }
 
     display(): void {
 
-        this.containerEl.empty();
+        this.containerEl.empty()
 
-        this.add_material_folder_setting();
+        this.add_material_folder_setting()
 
         // new Setting(this.containerEl)
         //     .setName('Setting #1')
@@ -45,16 +44,16 @@ export class ReadAssistSettingTab extends PluginSettingTab {
             .setName("阅读素材位置")
             .setDesc("在这里指定英文文章的文件夹位置。")
             .addSearch((cb) => {
-                new FolderSuggest(cb.inputEl);
+                new FolderSuggest(cb.inputEl)
                 cb.setPlaceholder("示例：folder1/folder2")
                     .setValue(this.plugin.settings.articles_folder)
                     .onChange((new_folder) => {
-                        this.plugin.settings.articles_folder = new_folder;
-                        this.plugin.saveSettings();
-                    });
+                        this.plugin.settings.articles_folder = new_folder
+                        this.plugin.saveSettings()
+                    })
                 // @ts-ignore
-                cb.containerEl.addClass("templater_search");
-            });
+                cb.containerEl.addClass("templater_search")
+            })
     }
 
 }

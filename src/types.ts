@@ -1,25 +1,25 @@
 declare module "obsidian" {
     interface App {
-        dom: {
-            appContainerEl: HTMLElement;
-        };
+        // dom: {
+        //     appContainerEl: HTMLElement
+        // }
         // Workspace: {
         //     sourceMode: MarkdownViewModeType;
         // }
     }
 
     interface Vault {
-        getConfig: (key: string) => string;
-        exists: (path: string) => Promise<boolean>;
-        getAvailablePath: (path: string, extension: string) => string;
-        getAbstractFileByPathInsensitive: (path: string) => string;
+        getConfig: (key: string) => string
+        exists: (path: string) => Promise<boolean>
+        getAvailablePath: (path: string, extension: string) => string
+        getAbstractFileByPathInsensitive: (path: string) => string
     }
 
     interface DataAdapter {
-        basePath: string;
+        basePath: string
         fs: {
-            uri: string;
-        };
+            uri: string
+        }
     }
 
     interface Workspace {
@@ -30,23 +30,23 @@ declare module "obsidian" {
     }
 
     interface EventRef {
-        e: Events;
+        e: Events
     }
 
     interface MarkdownSubView {
-        applyFoldInfo(foldInfo: FoldInfo): void;
-        getFoldInfo(): FoldInfo | null;
+        applyFoldInfo(foldInfo: FoldInfo): void
+        getFoldInfo(): FoldInfo | null
     }
 
     interface FoldInfo {
-        folds: FoldRange[];
-        lines: number;
+        folds: FoldRange[]
+        lines: number
     }
 
     interface FoldRange {
-        from: number;
-        to: number;
+        from: number
+        to: number
     }
 }
 
-export { };
+export { }

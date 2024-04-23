@@ -1,5 +1,5 @@
 import { Editor, EditorPosition, Notice } from 'obsidian'
-import { PromptModal } from "./PromptModal"
+import { PromptModal } from "../components/PromptModal"
 import { TemplaterError } from "utils/Error"
 // import escapeHTML from 'escape-html';
 

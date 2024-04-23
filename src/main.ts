@@ -1,20 +1,23 @@
-import { Editor, MarkdownPostProcessorContext, MarkdownView, Plugin } from 'obsidian'
+import { App, Editor, MarkdownPostProcessorContext, MarkdownView, Plugin } from 'obsidian'
 import {
 	DEFAULT_SETTINGS,
 	ReadAssistPluginSettings,
 	ReadAssistSettingTab
 } from "settings/Settings"
 import ReadAssistance from "./core/ReadAssist"
+
 import {
 	addCommentForSource,
 	addCommentForPreview
-} from 'AddComment'
+} from 'core/AddComment'
 
 export default class ReadAssistPlugin extends Plugin {
-	public settings: ReadAssistPluginSettings
-	public pathToWordSets = this.app.vault.configDir + "/mark-wordsets";
+	app: App
+	settings: ReadAssistPluginSettings
+	pathToWordSets = this.app.vault.configDir + "/mark-wordsets";
 
-	onload = async (): Promise<void> => {
+
+	async onload() {
 		await this.loadSettings()
 		this.addSettingTab(new ReadAssistSettingTab(this))
 
@@ -24,13 +27,14 @@ export default class ReadAssistPlugin extends Plugin {
 		this.registerMarkdownPostProcessor(
 			(el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
 				const activeFile = this.app.workspace.getActiveFile()
-				if (activeFile) {
+				const activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView)
+				if (activeFile && activeLeaf) {
 					ctx.addChild(
 						new ReadAssistance(
 							this.app,
 							el,
 							activeFile,
-							ctx.sourcePath,
+							activeLeaf,
 							this.pathToWordSets,
 							this.settings
 						)
@@ -38,11 +42,42 @@ export default class ReadAssistPlugin extends Plugin {
 				}
 			}
 		)
+
+		// const markdown = this.app.workspace.getActiveViewOfType(MarkdownView)
+
 		this.registerCommands()
+
+
+		// setTimeout(() => {
+		// 	const markdown = this.app.workspace.getActiveViewOfType(MarkdownView)
+		// 	new Notice(`${markdown == null}`)
+		// 	creatWordList(app, this)
+		// }, 1500)
 
 	}
 
+
 	registerCommands() {
+		this.addCommand({
+			id: "hide-word-list",
+			name: "隐藏/显示单词总览面板",
+			icon: "list",
+			callback: async () => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView)
+				if (view) {
+					const flashCardWrapper =
+						view.contentEl.querySelector(".flash-card-div")
+					if (flashCardWrapper) {
+						if (flashCardWrapper.classList.contains("hide"))
+							flashCardWrapper.removeClass("hide")
+						else flashCardWrapper.addClass("hide")
+					}
+				}
+			},
+		})
+
+		// 
+
 		this.addCommand({
 			id: "add-word-comment-in-source",
 			name: "在源码模式下：为单词添加注释块",
@@ -96,6 +131,7 @@ export default class ReadAssistPlugin extends Plugin {
 
 	onunload() { }
 
+	// data.json
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
 	}
