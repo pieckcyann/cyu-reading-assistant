@@ -54,11 +54,12 @@
   overflow-y: auto;
 }
 .flash-card-div .flash-card-wrapper .row {
+  font-family: Archivo, "手札体-简";
   font-size: 0.9rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
   width: 100%;
   transition: box-shadow 0.1s ease-in-out;
   background-color: var(--background-secondary);
@@ -86,17 +87,11 @@
   flex: 4;
 }
 /*********left*********/
-.workspace-leaf-content .flash-card-div:is(.floating-left, .floating-both) + .markdown-source-view > .cm-editor {
-  padding-left: 2rem;
-}
 .workspace-leaf-content .flash-card-div.pin:is(.floating-left, .floating-both) + .markdown-source-view > .cm-editor {
   padding-left: var(--flash-card-wrapper-line-width);
 }
 .workspace-leaf-content .flash-card-div:is(.floating-left, .floating-both) ~ .markdown-reading-view .markdown-preview-view {
   padding-left: 4rem;
-}
-.flash-card-div:is(.floating-left, .floating-both) + .markdown-source-view .cm-panels {
-  margin-left: -2rem;
 }
 /*********right*********/
 .flash-card-div.pin .flash-card-wrapper .heading-list-item > .text-wrap a > a,
@@ -106,9 +101,6 @@
 .flash-card-div.pin .flash-card-wrapper .heading-list-item > .text-wrap a > a.external-link,
 .flash-card-div .flash-card-wrapper:hover .heading-list-item > .text-wrap a > a.external-link {
   background-image: none;
-}
-.workspace-leaf-content .flash-card-div.floating-right ~ .markdown-reading-view .markdown-preview-view {
-  padding-right: 2rem;
 }
 .flash-card-div.floating-right .flash-card-wrapper {
   right: calc(0.5rem + var(--flash-card-wrapper-position));
@@ -120,7 +112,6 @@
 }
 .ra-count-display {
   font-size: 1rem !important;
-  color: var(--text-on-accent) !important;
   box-shadow: var(--input-shadow);
   background-color: var(--interactive-accent);
   float: right;
@@ -134,6 +125,7 @@
   border: 0;
   padding: var(--size-4-1) var(--size-4-3);
   height: var(--input-height);
+  --input-font-weight: normal;
   font-weight: var(--input-font-weight);
   cursor: var(--cursor);
   font-family: inherit;
@@ -141,6 +133,8 @@
   user-select: none;
   white-space: nowrap;
   margin-bottom: 10px;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, 0.042), 0px 5px 20px rgba(0, 0, 0, 0.07);
+  background-color: var(--background-secondary);
 }
 h1 label,
 .markdown-rendered h1 label {

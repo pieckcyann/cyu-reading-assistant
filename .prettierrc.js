@@ -5,7 +5,7 @@ module.exports = {
     htmlWhitespaceSensitivity: 'css', // HTML 中的空格敏感度遵循 CSS 规则
     jsxBracketSameLine: false,        // JSX 的结束括号是否与标签同行
     jsxSingleQuote: false,            // 在 JSX 中使用双引号而非单引号
-    printWidth: 120,                   // 每行代码的最大长度为 80
+    printWidth: 80,                   // 每行代码的最大长度为 80
     proseWrap: 'preserve',            // 保留文本的换行方式
     quoteProps: 'as-needed',          // 仅在需要时添加对象属性的引号
     semi: false,                      // 不使用分号结尾

@@ -1,11 +1,11 @@
 {
 	"id": "cyu-reading-assistant",
-	"name": "Cyu reading assistant",
+	"name": "Cyu Reading Assistant",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Obsidian plugin for learning English articles.",
 	"author": "pieckcyann",
-	"authorUrl": "https://obsidian.md",
+	"authorUrl": "https://github.com/pieckcyann",
 	"fundingUrl": "https://obsidian.md/pricing",
 	"isDesktopOnly": false
 }

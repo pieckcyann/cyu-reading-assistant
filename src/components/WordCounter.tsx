@@ -1,12 +1,24 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import { ReactView } from '../components/ReactView'
 import { createRoot } from 'react-dom/client'
 
-import { getWordCount } from './GetWordCount'
+import { getWordCount } from '../function/WordCount'
+
+interface wordCounterProps {
+	className?: string
+	textContent?: string
+}
+
+const WordCounter: React.FC<wordCounterProps> = ({
+	className = 'ra-count-display',
+	textContent = ' ... words',
+}) => {
+	return <span className={className}>{textContent}</span>
+}
 
 export async function mountWordCounter(container: HTMLElement) {
-	const readpage = container.find('.reading h1, .reading h2')
+	const readpage = container.find('h1, h2, h3, h4, h5, h6')
+	if (!readpage) return
 	const div = document.createElement('div')
 	readpage.appendChild(div)
 	const root = createRoot(div)
@@ -15,7 +27,10 @@ export async function mountWordCounter(container: HTMLElement) {
 
 	root.render(
 		<React.StrictMode>
-			<ReactView className="ra-count-display" textContent={wordCount + ' words'} />
+			<WordCounter
+				className="ra-count-display"
+				textContent={wordCount + ' words'}
+			/>
 		</React.StrictMode>
 	)
 }
@@ -47,6 +62,5 @@ async function getWordCountOfArticle(): Promise<number> {
 	if (!articleContent) return 0
 
 	const numberOfWord = getWordCount(escapeHtmlString(articleContent))
-
 	return numberOfWord
 }

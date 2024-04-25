@@ -1,77 +1,181 @@
 import { App, MarkdownRenderChild, MarkdownView, Notice, TFile } from 'obsidian'
 import { ReadAssistPluginSettings } from 'settings/Settings'
-import { WordChecker } from 'core/WordChecker'
-import { iterateLabels } from './WordCache'
+import { WordChecker } from 'function/WordChecker'
+import { iterateLabels } from '../function/HandleComment'
 import {
 	mountWordCounter,
 	unmountWordCounter
-} from './WordCount'
+} from '../components/WordCounter'
 
 import {
 	createRow,
+	removeRow,
 	creatWrapper
 } from "components/flashCardUI"
 
-import { getComments } from "core/WordCache"
+import { getComments } from "function/HandleComment"
 
+import ReactDOM from 'react-dom'
+import { adjustInputWidth, getInputTextWidth } from '../function/InputAdjuest'
 
 export default class ReadAssistance extends MarkdownRenderChild {
-	private leafContainerEl = this.activeLeaf.containerEl
 
 	constructor(
 		private app: App,
-		public container: HTMLElement,
 		public activeFile: TFile,
-		public activeLeaf: MarkdownView,
+		public activeLeafView: MarkdownView,
+		public renderedDiv: HTMLElement,
 		public pathToWordSets: string,
 		public settings: ReadAssistPluginSettings
 	) {
-		super(container)
-		this.setForLabels()
-		// console.log(`${container.innerHTML}`)
-		// console.log(`${activeLeaf.containerEl.querySelector('label')?.textContent}`)
+		super(renderedDiv)
 	}
 
 	async onload() {
-		await this.setForInputs()
+		this.setForLabels()
+		this.setForInputs()
+		this.checkCounter()
+
 		this.registerEvents()
-
-		mountWordCounter(this.containerEl)
-
-		creatWrapper(this.leafContainerEl, this.settings)
-		this.genRow()
-	}
-
-	genRow() {
-		const wrapper_dom = this.activeLeaf.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
-
-		getComments(
-			this.container,
-			async (word: string, comment: string) => {
-				createRow(word, comment, wrapper_dom, this.settings)
-			})
+		await this.checkWrapNode()
+		this.checkRowNode()
 	}
 
 	unload() {
 		this.removeInputListeners()
 		unmountWordCounter(this.containerEl)
+		this.destRow()
+	}
+
+	checkCounter = () => {
+		// mountWordCounter(this.activeLeafView.containerEl)
+		mountWordCounter(this.containerEl)
+	}
+
+	checkWrapNode = async () => {
+		creatWrapper(this.activeLeafView.containerEl, this.settings)
+	}
+
+	checkRowNode = () => {
+		const wrapper_dom = this.activeLeafView.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
+		if (!wrapper_dom) return
+		// const textContents = this.getExistingWord()
+
+		const rowElements: JSX.Element[] = []
+
+		getComments(
+			this.activeLeafView.containerEl,
+			(word: string, meaning: string) => {
+				// if (!textContents || !textContents.includes(word)) {
+				const rowElement = createRow(word, meaning)
+				rowElements.push(rowElement)
+				// }
+			}
+		)
+
+		/** 为了等待遍历完成, 将渲染放在下一个事件循环中 */
+		setTimeout(() => {
+			ReactDOM.render(rowElements, wrapper_dom)
+		}, 0)
+	}
+
+	updateRowNode = (
+		oldString: string,
+		newString: string
+	) => {
+		const wrapper_dom = this.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
+
+
+		if (wrapper_dom.hasChildNodes()) {
+			const rows = Array.from(wrapper_dom.querySelectorAll(".row"))
+
+			for (const row of rows) {
+				const word_column = row.querySelector(".word-column") as HTMLElement
+				// const meaning_column = row.querySelector(".meaning-column") as HTMLElement
+				const wordText = word_column.innerText.trim()
+				if (wordText == oldString) {
+					// meaning_column.innerText = newString
+					removeRow(wrapper_dom)
+					// createRow(word_column.innerText, newString, wrapper_dom, this.settings)
+
+					const rowElement = createRow(word_column.innerText, newString)
+					ReactDOM.render(rowElement, wrapper_dom)
+				}
+			}
+		}
+	}
+
+	getExistingWord = (): string[] => {
+		const wrapper_dom = this.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
+		const textContents: string[] = []
+
+		if (wrapper_dom.hasChildNodes()) {
+			const rows = Array.from(wrapper_dom.querySelectorAll(".row"))
+			if (!rows) return textContents
+
+			for (const row of rows) {
+				const word_column = row.querySelector(".word-column") as HTMLElement
+				if (word_column) {
+					const wordText = word_column.innerText.trim()
+					if (wordText) {
+						textContents.push(wordText)
+					}
+				}
+			}
+		}
+		return textContents
+	}
+
+	destRow = () => {
+		// const wrapper_dom = this.activeLeaf.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
+		const wrapper_dom = this.containerEl.querySelector(".flash-card-div") as HTMLElement
+		if (wrapper_dom) removeRow(wrapper_dom)
 	}
 
 	registerEvents() {
-		iterateLabels(
-			this.container,
-			async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
-				const textInput = inputs[1]
-				this.registerDomEvent(label, 'click', async () => {
-					this.adjustInputWidth(textInput)
-
-				})
-			})
+		// this.registerEvent(this.app.workspace.on("file-open", this.onFileChangeHandler))
+		// this.registerEvent(this.app.metadataCache.on("changed", this.onFileChangeHandler))
+		// this.registerEvent(this.app.workspace.on("active-leaf-change", this.onActiveLeafChangeHandler))
+		this.registerEvent(this.app.metadataCache.on("resolved", this.onFileChangeHandler))
 	}
+
+	onEditorChangeHandler = () => {
+		/**
+		creatWrapper(this.activeLeaf.containerEl, this.settings)
+		this.checkWrapNode()
+		this.checkRowNode()
+		*/
+	}
+
+	onFileChangeHandler = () => {
+		this.onEditorChangeHandler()
+	}
+
+	onActiveLeafChangeHandler = () => {
+		this.onEditorChangeHandler()
+	}
+
+	// registerEvents() {
+	// 	iterateLabels(
+	// 		this.containerEl,
+	// 		async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
+	// 			const textInput = inputs[1]
+	// 			this.registerDomEvent(label, 'click', async () => {
+	// 				this.adjustInputWidth(textInput)
+
+	// 			})
+	// 		})
+
+	// 	// this.registerEvent(workspace.on("file-open", this.onFileChangeHandler))
+	// 	// this.registerEvent(metadataCache.on("changed", this.onFileChangeHandler))
+
+	// 	// this.registerEvent(this.app.workspace.on("active-leaf-change", this.onActiveLeafChangeHandler))
+	// 	this.registerEvent(this.app.metadataCache.on("resolved", this.onFileChangeHandler))
+	// }
 
 	setForLabels() {
 		iterateLabels(
-			this.container,
+			this.containerEl,
 			async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
 				if (inputs.length > 0) {
 					const checkboxInput = document.createElement('input')
@@ -87,16 +191,9 @@ export default class ReadAssistance extends MarkdownRenderChild {
 						if (checkboxInput) {
 							checkboxInput.checked = !checkboxInput.checked
 						}
-						const del = label.querySelector('del')
-						if (del) {
-							// new Notice(`原型：${del.getAttribute('data-prototype')}`)
-							// const labelText = label.innerText.replace(
-							//     del?.innerText,
-							//     del.getAttribute('data-prototype') ?? ''
-							// )
-							// new Notice(`单词原型：${labelText}`)
-						}
+						adjustInputWidth(textInput)
 					})
+
 					// 右键点击复制
 					label.addEventListener('contextmenu', (event) => {
 						event.preventDefault()
@@ -129,8 +226,8 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			const word2Exists = await wordExists(inputValue, firstLetter2)
 
 			if (word1Exists || word2Exists) {
-				console.log(`marked: ${textContent} -> ${word1Exists}`)
-				console.log(`marked: ${inputValue} -> ${word2Exists}`)
+				if (textContent != word1Exists) console.log(`marked: ${textContent} -> ${word1Exists}`)
+				if (inputValue != word1Exists) console.log(`marked: ${inputValue} -> ${word2Exists}`)
 				const starSpan = document.createElement('span')
 				label.appendChild(starSpan)
 			}
@@ -138,7 +235,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			const word1Exists = await wordExists(textContent, firstLetter1)
 
 			if (word1Exists) {
-				console.log(`marked: ${textContent} -> ${word1Exists}`)
+				if (textContent != word1Exists) console.log(`marked: ${textContent} -> ${word1Exists}`)
 				const starSpan = document.createElement('span')
 				label.appendChild(starSpan)
 			}
@@ -147,30 +244,30 @@ export default class ReadAssistance extends MarkdownRenderChild {
 
 	async setForInputs(): Promise<void> {
 		iterateLabels(
-			this.container,
+			this.containerEl,
 			async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
-				// const checkbox = inputs[0]
 				const textInput = inputs[1]
 
-				textInput.addEventListener('input', () => this.adjustInputWidth(textInput))
+				textInput.addEventListener('input', () => {
+					adjustInputWidth(textInput)
+				})
 				textInput.removeEventListener('keyup', this.onInputKeyUp)
 				textInput.addEventListener('keyup', this.onInputKeyUp)
-				// textinput.removeEventListener('click', this.onInputClick)
 				textInput.addEventListener('click', this.onInputClick)
 				// 防止点击input触发label的active伪类
 				textInput.addEventListener('mousedown', () => {
 					label.classList.contains('sentence')
-						? (label.style.backgroundColor = 'rgba(199, 43, 108, 0.08)')
+						? (label.style.backgroundColor = 'rgba(1199, 43, 108, 0.06)')
 						: (label.style.backgroundColor = '#ecefe8')
 				})
 				textInput.addEventListener('mouseup', () => {
 					label.removeAttribute('style')
 				})
 				textInput.addEventListener('focus', () => {
-					textInput.style.width = this.getInputTextWidth(textInput) + 16 * 1.5 + 'px'
+					textInput.style.width = getInputTextWidth(textInput) + 16 * 1.5 + 'px'
 				})
 				textInput.addEventListener('blur', () => {
-					this.adjustInputWidth(textInput)
+					adjustInputWidth(textInput)
 				})
 			})
 	}
@@ -233,11 +330,11 @@ export default class ReadAssistance extends MarkdownRenderChild {
 
 	async removeInputListeners(): Promise<void> {
 		iterateLabels(
-			this.container,
+			this.containerEl,
 			async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
 				const textInput = inputs[1]
 
-				textInput.removeEventListener('input', () => this.adjustInputWidth(textInput))
+				textInput.removeEventListener('input', () => adjustInputWidth(textInput))
 				textInput.removeEventListener('keyup', this.onInputKeyUp)
 				textInput.removeEventListener('click', this.onInputClick)
 				textInput.removeEventListener('mousedown', () => {
@@ -249,10 +346,10 @@ export default class ReadAssistance extends MarkdownRenderChild {
 					label.removeAttribute('style')
 				})
 				textInput.removeEventListener('focus', () => {
-					textInput.style.width = this.getInputTextWidth(textInput) + 16 * 1.5 + 'px'
+					textInput.style.width = getInputTextWidth(textInput) + 16 * 1.5 + 'px'
 				})
 				textInput.removeEventListener('blur', () => {
-					this.adjustInputWidth(textInput)
+					adjustInputWidth(textInput)
 				})
 			})
 	}
@@ -264,7 +361,10 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		newValue: string,
 		isSentence: boolean
 	): Promise<void> {
-		const fileContent = await this.app.vault.read(this.activeFile)
+		// const file = this.activeLeafView.file
+		const file = this.activeFile
+		if (!file) return
+		const fileContent = await this.app.vault.read(file)
 		const labelClass = isSentence ? ' class="sentence"' : ''
 
 		let regex = getRegexForLabel(labelText, oldValue, labelClass)
@@ -300,7 +400,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			regex,
 			`<label${labelClass}>${labelText}<input value=${quoteType}${newValue}${quoteType}></label>`
 		)
-		await this.app.vault.modify(this.activeFile, newFileContent)
+		await this.app.vault.modify(file, newFileContent)
 		showNoticeForMatchCount(fileContent, regex)
 
 		function getRegexForLabel(labelText: string, oldValue: string, labelClass: string): RegExp {
@@ -332,77 +432,11 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		}
 	}
 
-	// 重置宽度
-	adjustInputWidth(input: HTMLInputElement) {
-		input.style.width = `${this.getInputTextWidth(input)}px`
-	}
-
-	// 计算宽度
-	getInputTextWidth(input: HTMLInputElement): number {
-		const d = document.createElement('span')
-		d.innerText = input.value
-		d.style.fontSize = window.getComputedStyle(input).getPropertyValue('font-size')
-		d.style.fontFamily = window.getComputedStyle(input).getPropertyValue('font-family')
-		d.style.visibility = 'hidden'
-		d.style.whiteSpace = 'nowrap'
-		d.style.padding = '0'
-		document.body.appendChild(d)
-
-		// 计算包括 letter-spacing 在内的实际文本宽度
-		const letterSpacing = parseFloat(window.getComputedStyle(input).getPropertyValue('letter-spacing'))
-		const paddingOffseValue =
-			parseFloat(window.getComputedStyle(input).getPropertyValue('letter-spacing')) +
-			parseFloat(window.getComputedStyle(input).getPropertyValue('padding-left'))
-		const borderOffseValue =
-			parseFloat(window.getComputedStyle(input).getPropertyValue('border-left')) +
-			parseFloat(window.getComputedStyle(input).getPropertyValue('border-right'))
-
-		const width = d.offsetWidth + letterSpacing * input.value.length + (paddingOffseValue + borderOffseValue)
-
-		document.body.removeChild(d)
-		return width + 16
-	}
-
 	clearEffectsOnEditorChange() {
-		// TODO: 解决 “编辑源码后会强制改变checkboxinput装填” 问题
+		// TODO: 解决 “编辑源码后会强制改变checkboxinput状态” 问题
 	}
 
 	positionComment = () => {
 		// TODO: 优化提示框textinput位置
-	}
-
-	drag(obj: HTMLElement): void {
-		// 当鼠标在被拖拽元素上按下，开始拖拽
-		obj.onmousedown = function (event: MouseEvent) {
-			// 设置obj捕获所有的鼠标按下事件，而不仅仅是在元素内部区域
-			// obj.setCapture && obj.setCapture();
-			// 解决兼容性问题,实现IE8的兼容
-			event = event || window.event
-			// 鼠标在元素中的偏移量等于 鼠标的clientX - 元素的offsetLeft
-			const ol = event.clientX - obj.offsetLeft
-			const ot = event.clientY - obj.offsetTop
-
-			// 为document绑定一个onmousemove事件
-			document.onmousemove = function (event: MouseEvent) {
-				event = event || window.event
-				const left = event.clientX - ol
-				const top = event.clientY - ot
-				obj.style.left = left + 'px'
-				obj.style.top = top + 'px'
-			}
-
-			// 为document绑定一个鼠标松开事件onmouseup
-			document.onmouseup = function () {
-				// 当鼠标松开时，被拖拽元素固定在当前位置
-				// 当鼠标松开时，取消onmousemove事件
-				document.onmousemove = null
-				// 当鼠标松开时，onmouseup事件，要不每次一松开鼠标都触发此事件
-				document.onmouseup = null
-				// 鼠标松开，取消事件的捕获
-				// obj.releaseCapture && obj.releaseCapture();
-			}
-
-			return false
-		}
 	}
 }

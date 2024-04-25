@@ -16,5 +16,5 @@
       "strictNullChecks": true,
       "lib": ["DOM", "ES5", "ES6", "ES7", "ESNext"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "docs/**/*", "src/core/ExampleView.tsx", "src/core/ReadAssist.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "docs/**/*", "src/core/ExampleView.tsx", "src/core/ReadAssist.ts", "src/components/flashCardUI.tsx"]
 }

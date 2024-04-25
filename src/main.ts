@@ -9,53 +9,53 @@ import ReadAssistance from "./core/ReadAssist"
 import {
 	addCommentForSource,
 	addCommentForPreview
-} from 'core/AddComment'
+} from 'function/AddComment'
 
 export default class ReadAssistPlugin extends Plugin {
+
 	app: App
 	settings: ReadAssistPluginSettings
-	pathToWordSets = this.app.vault.configDir + "/mark-wordsets";
-
+	pathToWordSets = this.app.vault.configDir + "/mark-wordsets"
 
 	async onload() {
 		await this.loadSettings()
 		this.addSettingTab(new ReadAssistSettingTab(this))
 
-		if (!await this.app.vault.adapter.exists(this.pathToWordSets))
+		if (!await this.app.vault.adapter.exists(this.pathToWordSets)) {
 			await this.app.vault.createFolder(this.pathToWordSets)
+		}
 
-		this.registerMarkdownPostProcessor(
-			(el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
-				const activeFile = this.app.workspace.getActiveFile()
-				const activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView)
-				if (activeFile && activeLeaf) {
-					ctx.addChild(
-						new ReadAssistance(
-							this.app,
-							el,
-							activeFile,
-							activeLeaf,
-							this.pathToWordSets,
-							this.settings
-						)
-					)
-				}
-			}
-		)
-
-		// const markdown = this.app.workspace.getActiveViewOfType(MarkdownView)
+		this.render()
 
 		this.registerCommands()
-
-
-		// setTimeout(() => {
-		// 	const markdown = this.app.workspace.getActiveViewOfType(MarkdownView)
-		// 	new Notice(`${markdown == null}`)
-		// 	creatWordList(app, this)
-		// }, 1500)
-
 	}
 
+	render = () => {
+		this.app.workspace.onLayoutReady(() => {
+
+			this.registerMarkdownPostProcessor(
+				(el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
+					const isSetDirectory = ctx.sourcePath.startsWith(this.settings.articles_folder)
+					if (isSetDirectory) {
+						const activeLeafView = this.app.workspace.getActiveViewOfType(MarkdownView)
+						const activeFile = this.app.workspace.getActiveFile()
+						if (activeLeafView && activeFile) {
+							ctx.addChild(
+								new ReadAssistance(
+									this.app,
+									activeFile,
+									activeLeafView,
+									el,
+									this.pathToWordSets,
+									this.settings)
+							)
+							console.log(el)
+						}
+					}
+				})
+		})
+
+	}
 
 	registerCommands() {
 		this.addCommand({
