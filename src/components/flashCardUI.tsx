@@ -1,8 +1,64 @@
-import ReadAssistPlugin from 'main'
-import { MarkdownView, requireApiVersion } from 'obsidian'
-import { ReadAssistPluginSettings } from 'settings/Settings'
+import { WordData } from 'main';
+import { MarkdownView } from 'obsidian';
+import { ReadAssistPluginSettings } from 'settings/Settings';
 
-import React from 'react'
+import React from 'react';
+
+const Row = ({ word, meaning }: { word: string; meaning: string }) => (
+	<div className="row">
+		<div className="word-column">{word}</div>
+		<div className="symbol-column">-&gt;</div>
+		<div className="meaning-column">{meaning}</div>
+	</div>
+);
+
+export function createRow(word: string, meaning: string): React.ReactElement {
+	return <Row word={word} meaning={meaning} />;
+}
+
+export function createTopDiv(container: HTMLElement) {
+	const flashCardDiv = createEl('div');
+	flashCardDiv.addClass('flash-card-div');
+	flashCardDiv.addClass('floating-right');
+
+	const flashCardWrapper = createEl('div');
+	flashCardWrapper.addClass('flash-card-wrapper');
+
+	flashCardDiv.appendChild(flashCardWrapper);
+
+	container
+		?.querySelector('.markdown-source-view')
+		?.insertAdjacentElement('beforebegin', flashCardDiv);
+}
+
+const Wrapper = ({
+	settings,
+	children,
+}: {
+	settings?: ReadAssistPluginSettings;
+	children?: React.ReactNode;
+}) => {
+	return (
+		<div
+			className="flash-card-wrapper"
+			onMouseEnter={() => console.log('Mouse entered')}
+			onMouseLeave={() => console.log('Mouse left')}
+		>
+			{children}
+		</div>
+	);
+};
+
+export function createWrapper(leaf: MarkdownView, datasMap: WordData[]) {
+	const wrapper = leaf.containerEl.find('.flash-card-wrapper');
+	if (wrapper == null) return;
+
+	const listItems = datasMap.map((data) => (
+		<Row key={data.word} word={data.word} meaning={data.meaning}></Row>
+	));
+
+	return <Wrapper>{listItems}</Wrapper>;
+}
 
 export function removeRow(wrapper_dom: HTMLElement) {
 	// 移除所有子元素
@@ -14,81 +70,5 @@ export function removeRow(wrapper_dom: HTMLElement) {
 	//     wrapper_dom.parentNode.removeChild(wrapper_dom)
 	// }
 
-	wrapper_dom.innerHTML = ''
-}
-
-// 声明一个 React 组件，用于表示行
-const Row = ({ word, meaning }: { word: string; meaning: string }) => (
-	<div className="row">
-		<div className="word-column">{word}</div>
-		<div className="symbol-column">-&gt;</div>
-		<div className="meaning-column">{meaning}</div>
-	</div>
-)
-
-// 返回一个 React 元素，表示创建的行
-export function createRow(word: string, meaning: string): React.ReactElement {
-	return <Row word={word} meaning={meaning} />
-}
-
-// export async function createRow(
-// 	word: string,
-// 	meaning: string,
-// 	wrapper_dom: HTMLElement,
-// 	settings: ReadAssistPluginSettings
-// ) {
-// 	const row_dom = wrapper_dom.createEl('div')
-// 	row_dom.addClass('row')
-
-// 	const word_column = row_dom.createEl('div')
-// 	word_column.addClass('word-column')
-// 	word_column.innerHTML = word
-
-// 	const symbol_column = row_dom.createEl('div')
-// 	symbol_column.addClass('symbol-column')
-// 	symbol_column.innerHTML = '->'
-
-// 	const meaning_column = row_dom.createEl('div')
-// 	meaning_column.addClass('meaning-column')
-// 	meaning_column.innerHTML = meaning
-
-// 	row_dom.appendChild(word_column)
-// 	row_dom.appendChild(symbol_column)
-// 	row_dom.appendChild(meaning_column)
-
-// 	wrapper_dom.appendChild(row_dom)
-// }
-
-export function creatWrapper(container: HTMLElement, settings: ReadAssistPluginSettings): void {
-	const flash_card_div = container.querySelector('.flash-card-div')
-	if (!flash_card_div) {
-		const flashCardDiv = createEl('div')
-		flashCardDiv.addClass('flash-card-div')
-		flashCardDiv.addClass('floating-right')
-		container?.querySelector('.markdown-source-view')?.insertAdjacentElement('beforebegin', flashCardDiv)
-	} else {
-		const flash_card_wrapper = container.querySelector('.flash-card-wrapper')
-		if (!flash_card_wrapper) {
-			const flashCardWrapper = createEl('div')
-			flashCardWrapper.addClass('flash-card-wrapper')
-			flashCardWrapper.onmouseenter = function () {
-				flashCardWrapper.addClass('hover')
-			}
-			flashCardWrapper.onmouseleave = function () {
-				flashCardWrapper.removeClass('hover')
-			}
-			flash_card_div.appendChild(flashCardWrapper)
-		}
-	}
-}
-
-export function refresh_node(plugin: ReadAssistPlugin, view: MarkdownView): boolean {
-	requireApiVersion('0.15.0') ? (activeDocument = activeWindow.document) : (activeDocument = window.document)
-
-	const flash_card_dom = view.contentEl?.querySelector('.flash-card-div')
-	if (flash_card_dom) {
-		return true
-	} else {
-		return false
-	}
+	wrapper_dom.innerHTML = '';
 }

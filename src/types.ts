@@ -1,8 +1,12 @@
+// declare module 'react-dom' {
+//     export function createRoot(container: Element | Document | DocumentFragment | null): ReactDOM.Root
+// }
+
 declare module "obsidian" {
     interface App {
-        // dom: {
-        //     appContainerEl: HTMLElement
-        // }
+        dom: {
+            appContainerEl: HTMLElement
+        }
         // Workspace: {
         //     sourceMode: MarkdownViewModeType;
         // }

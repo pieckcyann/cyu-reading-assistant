@@ -44,11 +44,17 @@
 }
 
 .flash-card-div {
+
     &.hide {
         display: none;
     }
 
     .flash-card-wrapper {
+
+        // &::-webkit-scrollbar {
+        //     display: none;
+        // }
+
         margin: 0;
         padding: 0;
         z-index: 2;
@@ -73,6 +79,11 @@
         // background: var(--flash-card-wrapper-background-color);
 
 
+        .ra-toolbar {
+            --interactive-normal: aqua;
+            background-color: var(--interactive-normal);
+        }
+
         .row {
             font-family: Archivo, "手札体-简";
             font-size: 0.9rem;
@@ -86,13 +97,11 @@
             border-radius: 6px;
             transition: box-shadow 0.1s ease-in-out;
 
-            // latex-suit框样式
-            // box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, .042), 0px 5px 20px rgba(0, 0, 0, .07);
-            background-color: var(--background-secondary);
-            color: var(--text-normal);
-            border: 1px solid var(--background-modifier-border-hover);
             padding: 4px 6px;
             border-radius: 6px;
+            border: 1px solid rgba(@comment-bg-blue, 1);
+            // background-color: rgba(@comment-bg-blue, @label-opacity-blue);
+            background-color: #efefe8;
 
             &:hover {
                 box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, .042), 0px 5px 20px rgba(0, 0, 0, .07);
@@ -115,6 +124,11 @@
 
             .meaning-column {
                 flex: 4;
+
+                &.hide-meaning {
+                    // line-height: 0;
+                    background-color: red;
+                }
             }
         }
     }
@@ -171,12 +185,9 @@
 // **************************************************
 
 .ra-count-display {
-    font-size: 1rem !important;
     // color: var(--text-on-accent) !important;
-    box-shadow: var(--input-shadow);
+    // box-shadow: var(--input-shadow);
     background-color: var(--interactive-accent);
-
-    float: right;
 
     -webkit-app-region: no-drag;
     display: inline-flex;
@@ -197,8 +208,15 @@
     white-space: nowrap;
     margin-bottom: 10px;
 
-    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, .042), 0px 5px 20px rgba(0, 0, 0, .07);
+    float: right;
+    --font-ui-small: 0.9rem;
     background-color: var(--background-secondary);
+    margin-top: 1rem;
+    border: 1px solid var(--background-modifier-border-hover);
+
+    &:hover {
+        box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, .042), 0px 5px 20px rgba(0, 0, 0, .07);
+    }
 }
 
 h1 label,
@@ -273,6 +291,7 @@ label {
             // left: 50%;
             // transform: translate(-50%, -50%);
             transition: color 0.1s ease-in-out, width 0.2s ease-in-out;
+            z-index: 3;
 
             &:hover {
                 border: 2px solid rgb(@comment-bg-blue);

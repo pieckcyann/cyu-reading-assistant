@@ -1,22 +1,17 @@
 import { App, MarkdownRenderChild, MarkdownView, Notice, TFile } from 'obsidian'
 import { ReadAssistPluginSettings } from 'settings/Settings'
 import { WordChecker } from 'function/WordChecker'
-import { iterateLabels } from '../function/HandleComment'
+import { iterateLabels } from '../function/ParseComment'
 import {
 	mountWordCounter,
 	unmountWordCounter
 } from '../components/WordCounter'
 
 import {
-	createRow,
-	removeRow,
-	creatWrapper
-} from "components/flashCardUI"
+	adjustInputWidth,
+	getInputTextWidth
+} from '../function/InputAdjuest'
 
-import { getComments } from "function/HandleComment"
-
-import ReactDOM from 'react-dom'
-import { adjustInputWidth, getInputTextWidth } from '../function/InputAdjuest'
 
 export default class ReadAssistance extends MarkdownRenderChild {
 
@@ -34,109 +29,26 @@ export default class ReadAssistance extends MarkdownRenderChild {
 	async onload() {
 		this.setForLabels()
 		this.setForInputs()
-		this.checkCounter()
-
 		this.registerEvents()
-		await this.checkWrapNode()
-		this.checkRowNode()
+
+		this.checkCounter()
 	}
 
 	unload() {
 		this.removeInputListeners()
 		unmountWordCounter(this.containerEl)
-		this.destRow()
 	}
 
 	checkCounter = () => {
-		// mountWordCounter(this.activeLeafView.containerEl)
-		mountWordCounter(this.containerEl)
-	}
-
-	checkWrapNode = async () => {
-		creatWrapper(this.activeLeafView.containerEl, this.settings)
-	}
-
-	checkRowNode = () => {
-		const wrapper_dom = this.activeLeafView.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
-		if (!wrapper_dom) return
-		// const textContents = this.getExistingWord()
-
-		const rowElements: JSX.Element[] = []
-
-		getComments(
-			this.activeLeafView.containerEl,
-			(word: string, meaning: string) => {
-				// if (!textContents || !textContents.includes(word)) {
-				const rowElement = createRow(word, meaning)
-				rowElements.push(rowElement)
-				// }
-			}
-		)
-
-		/** 为了等待遍历完成, 将渲染放在下一个事件循环中 */
-		setTimeout(() => {
-			ReactDOM.render(rowElements, wrapper_dom)
-		}, 0)
-	}
-
-	updateRowNode = (
-		oldString: string,
-		newString: string
-	) => {
-		const wrapper_dom = this.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
-
-
-		if (wrapper_dom.hasChildNodes()) {
-			const rows = Array.from(wrapper_dom.querySelectorAll(".row"))
-
-			for (const row of rows) {
-				const word_column = row.querySelector(".word-column") as HTMLElement
-				// const meaning_column = row.querySelector(".meaning-column") as HTMLElement
-				const wordText = word_column.innerText.trim()
-				if (wordText == oldString) {
-					// meaning_column.innerText = newString
-					removeRow(wrapper_dom)
-					// createRow(word_column.innerText, newString, wrapper_dom, this.settings)
-
-					const rowElement = createRow(word_column.innerText, newString)
-					ReactDOM.render(rowElement, wrapper_dom)
-				}
-			}
-		}
-	}
-
-	getExistingWord = (): string[] => {
-		const wrapper_dom = this.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
-		const textContents: string[] = []
-
-		if (wrapper_dom.hasChildNodes()) {
-			const rows = Array.from(wrapper_dom.querySelectorAll(".row"))
-			if (!rows) return textContents
-
-			for (const row of rows) {
-				const word_column = row.querySelector(".word-column") as HTMLElement
-				if (word_column) {
-					const wordText = word_column.innerText.trim()
-					if (wordText) {
-						textContents.push(wordText)
-					}
-				}
-			}
-		}
-		return textContents
-	}
-
-	destRow = () => {
-		// const wrapper_dom = this.activeLeaf.containerEl.querySelector(".flash-card-wrapper") as HTMLElement
-		const wrapper_dom = this.containerEl.querySelector(".flash-card-div") as HTMLElement
-		if (wrapper_dom) removeRow(wrapper_dom)
+		const wordCounter = this.containerEl.querySelector(".ra-count-display") as HTMLElement
+		if (!wordCounter) mountWordCounter(this.containerEl)
 	}
 
 	registerEvents() {
 		// this.registerEvent(this.app.workspace.on("file-open", this.onFileChangeHandler))
 		// this.registerEvent(this.app.metadataCache.on("changed", this.onFileChangeHandler))
 		// this.registerEvent(this.app.workspace.on("active-leaf-change", this.onActiveLeafChangeHandler))
-		this.registerEvent(this.app.metadataCache.on("resolved", this.onFileChangeHandler))
+		// this.registerEvent(this.app.metadataCache.on("resolved", this.onFileChangeHandler))
 	}
 
 	onEditorChangeHandler = () => {
@@ -154,24 +66,6 @@ export default class ReadAssistance extends MarkdownRenderChild {
 	onActiveLeafChangeHandler = () => {
 		this.onEditorChangeHandler()
 	}
-
-	// registerEvents() {
-	// 	iterateLabels(
-	// 		this.containerEl,
-	// 		async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
-	// 			const textInput = inputs[1]
-	// 			this.registerDomEvent(label, 'click', async () => {
-	// 				this.adjustInputWidth(textInput)
-
-	// 			})
-	// 		})
-
-	// 	// this.registerEvent(workspace.on("file-open", this.onFileChangeHandler))
-	// 	// this.registerEvent(metadataCache.on("changed", this.onFileChangeHandler))
-
-	// 	// this.registerEvent(this.app.workspace.on("active-leaf-change", this.onActiveLeafChangeHandler))
-	// 	this.registerEvent(this.app.metadataCache.on("resolved", this.onFileChangeHandler))
-	// }
 
 	setForLabels() {
 		iterateLabels(
@@ -293,6 +187,8 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			checkChildrenDelTag(label, labelText)
 
 			await this.updateInputValueInFile(labelText.value, oldValue, newValue, label.classList.contains('sentence'))
+
+			// this.updateRowNode(oldValue, newValue)
 		}
 
 		function checkChildrenDelTag(label: HTMLElement, labelTextObj: { value: string }) {
@@ -304,7 +200,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 					delText,
 					`<del data-prototype="${delAttr}">${delText}</del>`
 				)
-				this.wordMap.setKeyValue(`${delAttr}`, delText)
+				// this.wordMap.setKeyValue(`${delAttr}`, delText)
 			}
 		}
 

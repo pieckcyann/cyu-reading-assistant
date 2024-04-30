@@ -53,6 +53,10 @@
   width: auto;
   overflow-y: auto;
 }
+.flash-card-div .flash-card-wrapper .ra-toolbar {
+  --interactive-normal: aqua;
+  background-color: var(--interactive-normal);
+}
 .flash-card-div .flash-card-wrapper .row {
   font-family: Archivo, "手札体-简";
   font-size: 0.9rem;
@@ -61,12 +65,12 @@
   align-items: center;
   margin-bottom: 10px;
   width: 100%;
-  transition: box-shadow 0.1s ease-in-out;
-  background-color: var(--background-secondary);
-  color: var(--text-normal);
   border: 1px solid var(--background-modifier-border-hover);
+  transition: box-shadow 0.1s ease-in-out;
   padding: 4px 6px;
   border-radius: 6px;
+  border: 1px solid rgba(0, 114, 208, 1);
+  background-color: #efefe8;
 }
 .flash-card-div .flash-card-wrapper .row:hover {
   box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, 0.042), 0px 5px 20px rgba(0, 0, 0, 0.07);
@@ -85,6 +89,9 @@
 }
 .flash-card-div .flash-card-wrapper .row .meaning-column {
   flex: 4;
+}
+.flash-card-div .flash-card-wrapper .row .meaning-column.hide-meaning {
+  background-color: red;
 }
 /*********left*********/
 .workspace-leaf-content .flash-card-div.pin:is(.floating-left, .floating-both) + .markdown-source-view > .cm-editor {
@@ -111,10 +118,7 @@
   text-align: right;
 }
 .ra-count-display {
-  font-size: 1rem !important;
-  box-shadow: var(--input-shadow);
   background-color: var(--interactive-accent);
-  float: right;
   -webkit-app-region: no-drag;
   display: inline-flex;
   align-items: center;
@@ -133,8 +137,14 @@
   user-select: none;
   white-space: nowrap;
   margin-bottom: 10px;
-  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, 0.042), 0px 5px 20px rgba(0, 0, 0, 0.07);
+  float: right;
+  --font-ui-small: 0.9rem;
   background-color: var(--background-secondary);
+  margin-top: 1rem;
+  border: 1px solid var(--background-modifier-border-hover);
+}
+.ra-count-display:hover {
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, 0.042), 0px 5px 20px rgba(0, 0, 0, 0.07);
 }
 h1 label,
 .markdown-rendered h1 label {
@@ -193,6 +203,7 @@ label input[type="text"] {
   bottom: 110%;
   left: 50%;
   transition: color 0.1s ease-in-out, width 0.2s ease-in-out;
+  z-index: 3;
 }
 label input[type="text"]:hover {
   border: 2px solid rgb(0, 114, 208);
