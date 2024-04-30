@@ -17,7 +17,7 @@ export function addCommentForSource({
 
     // const escapedSelection = escapeHTML(selection);
     const escapedSelection = selection
-    const replacement = `<${containerTag}${containerTagClass}>${escapedSelection}<input value="comments"></${containerTag}>`
+    const replacement = `<${containerTag}${containerTagClass}>${escapedSelection}<input value="comments"${containerTagClass}></${containerTag}>`
 
     if (replacement) {
         const currentCursor = editor.getCursor("from")

@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
-import { getWordCount } from '../function/WordCount';
+import { getWordCount } from '../func/WordCount';
 
 interface wordCounterProps {
 	className?: string;
@@ -39,7 +39,9 @@ export async function mountWordCounter(containerEl: HTMLElement) {
 }
 
 export function unmountWordCounter(container: HTMLElement) {
-	const div = container.querySelector('.reading h1 > div');
+	// const div = container.querySelector('.reading h1 > div');
+	const div = container.querySelector('.frontmatter');
+
 	if (div instanceof Element) {
 		ReactDOM.unmountComponentAtNode(div);
 	}

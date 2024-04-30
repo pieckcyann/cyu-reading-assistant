@@ -1,4 +1,4 @@
-import { WordData } from "main"
+import { RowData } from "main"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Notice } from "obsidian"
 
@@ -46,37 +46,41 @@ export function getComments(
 
 export async function parseActiveViewToComments(
     text: string,
-    callback: (wordDataArray: WordData[]) => void
+    callback: (wordDataArray: RowData[]) => void
 ) {
     const lines = text.split("\n")
-    const wordDataArray: WordData[] = []
+    const wordDataArray: RowData[] = []
 
 
-    const regExpText = `[\\s\\S]*?`
+    // const regExpText = `[\\s\\S]*?`
+    const regExpText = `(?:(?!<[^>]+>).)*`
 
-    const regExpWord = new RegExp(
+    const regExpSingleWord = new RegExp(
         `<label>(${regExpText})<input\\s+value=["']([^"']+)["']>\\s*<\\/label>`,
         'gm')
 
     const regExpNonPrototype = new RegExp(
-        // `<del\\s+data-prototype=["']([^"']+)["']>([\\s\\S]*?)<\\/del>`,
         `<label>${regExpText}<del\\s+data-prototype=["']([^"']+)["']>${regExpText}<\\/del>${regExpText}<input\\s+value=["']([^"']+)["']><\\/label>`,
         'gm')
 
     const regExpSentence = new RegExp(
-        `<label class="sentence">((?:(?=.*?<input\\s+value=["'][^"']+["']><\\/label>).)+)<input\\s+value=["']([^"']+)["']><\\/label>`,
-        'gm')
+        // `<label class="sentence">((?:(?!<label class="sentence">).)*?(?=(<input\\s+value=["'][^"']+["']><\\/label>).)+)<input\\s+value=["']([^"']+)["']><\\/label>`,
+        `<label class="sentence">([\\s\\S]*?)<input\\s+value=["']([^"']+)["'] class="sentence">\\s*<\\/label>`,
+        'gm'
+    )
 
     lines.forEach(
         async (lineContent: string, lineNumber: number) => {
 
+            const matches: RowData[] = []
+
             // <label>meaning<input value="word"></label>
-            const signleWordMatches = lineContent.matchAll(regExpWord)
+            const signleWordMatches = lineContent.matchAll(regExpSingleWord)
             for (const match of signleWordMatches) {
                 if (match[1] && match[2]) {
                     const word = match[1]
                     const meaning = match[2]
-                    wordDataArray.push({ word, meaning })
+                    matches.push({ word, meaning, isSentence: false })
                 }
             }
 
@@ -86,7 +90,7 @@ export async function parseActiveViewToComments(
                 if (match[1] && match[2]) {
                     const word = match[1]
                     const meaning = match[2]
-                    wordDataArray.push({ word, meaning })
+                    matches.push({ word, meaning, isSentence: false })
                 }
             }
 
@@ -94,19 +98,23 @@ export async function parseActiveViewToComments(
             const sentenceMatches = lineContent.matchAll(regExpSentence)
             for (const match of sentenceMatches) {
                 if (match[1] && match[2]) {
-                    const word = match[1]
-                        .replace(regExpWord, '').replace('<label>', '')
-                        .replace(regExpNonPrototype, '')
+                    const word = match[1].replace(/<[^>]+>/g, '')
 
                     const meaning = match[2]
-                    wordDataArray.push({ word, meaning })
+                    matches.push({ word, meaning, isSentence: true })
                 }
             }
+
+            // Sort matches based on their appearance in lineContent
+            const sortedMatches = matches.sort((a, b) => lineContent.indexOf(a.word) - lineContent.indexOf(b.word))
+
+            // Push sorted matches to wordDataArray
+            sortedMatches.forEach(({ word, meaning, isSentence }) => wordDataArray.push({ word, meaning, isSentence }))
         })
 
     callback(wordDataArray)
 
-    // 使用 Promise 包装回调函数，并等待其执行完成
+    // 使用 Promise 包装回调函数，等待其执行完成
     // await new Promise(resolve => {
     //     callback(wordDataArray)
     //     resolve(null)

@@ -1,16 +1,16 @@
 import { App, MarkdownRenderChild, MarkdownView, Notice, TFile } from 'obsidian'
 import { ReadAssistPluginSettings } from 'settings/Settings'
-import { WordChecker } from 'function/WordChecker'
-import { iterateLabels } from '../function/ParseComment'
+import { WordChecker } from 'func/WordMarkCheck'
+import { iterateLabels } from './func/ParseComment'
 import {
 	mountWordCounter,
 	unmountWordCounter
-} from '../components/WordCounter'
+} from './components/WordCounter'
 
 import {
 	adjustInputWidth,
 	getInputTextWidth
-} from '../function/InputAdjuest'
+} from './func/InputAdjuest'
 
 
 export default class ReadAssistance extends MarkdownRenderChild {
@@ -96,8 +96,10 @@ export default class ReadAssistance extends MarkdownRenderChild {
 						navigator.clipboard.writeText(copyText)
 					})
 
-					// 添加星标span
-					await this.checkWordMarked(label, textInput)
+					if (this.settings.is_mark_star == true) {
+						// 添加星标span
+						await this.checkWordMarked(label, textInput)
+					}
 				}
 			})
 	}
@@ -107,30 +109,30 @@ export default class ReadAssistance extends MarkdownRenderChild {
 
 		const textContent = (label.textContent ?? '').toLowerCase()
 		const inputValue = textInput.value.split(' ')[0].toLowerCase()
-		const firstLetter1 = textContent.charAt(0).toLowerCase()
-		const firstLetter2 = inputValue.charAt(0).toLowerCase()
 		const isValidInput = /^[a-zA-Z]+$/.test(inputValue)
 
-		const wordExists = async (word: string, firstLetter: string) => {
-			return await WordChecker(app, this.pathToWordSets, word, firstLetter)
+		const wordExists = async (word: string) => {
+			return await WordChecker(app, this.pathToWordSets, word)
 		}
 
 		if (isValidInput) {
-			const word1Exists = await wordExists(textContent, firstLetter1)
-			const word2Exists = await wordExists(inputValue, firstLetter2)
+			const word1Exists = await wordExists(textContent)
+			const word2Exists = await wordExists(inputValue)
 
 			if (word1Exists || word2Exists) {
 				if (textContent != word1Exists) console.log(`marked: ${textContent} -> ${word1Exists}`)
 				if (inputValue != word1Exists) console.log(`marked: ${inputValue} -> ${word2Exists}`)
 				const starSpan = document.createElement('span')
+				starSpan.addClass('ra-star')
 				label.appendChild(starSpan)
 			}
 		} else {
-			const word1Exists = await wordExists(textContent, firstLetter1)
+			const word1Exists = await wordExists(textContent)
 
 			if (word1Exists) {
 				if (textContent != word1Exists) console.log(`marked: ${textContent} -> ${word1Exists}`)
 				const starSpan = document.createElement('span')
+				starSpan.addClass('ra-star')
 				label.appendChild(starSpan)
 			}
 		}
@@ -294,7 +296,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 
 		const newFileContent = fileContent.replace(
 			regex,
-			`<label${labelClass}>${labelText}<input value=${quoteType}${newValue}${quoteType}></label>`
+			`<label${labelClass}>${labelText}<input value=${quoteType}${newValue}${quoteType}${labelClass}></label>`
 		)
 		await this.app.vault.modify(file, newFileContent)
 		showNoticeForMatchCount(fileContent, regex)
@@ -306,7 +308,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 
 			let quoteType
 			oldValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`)
-			const regexPattern = `<label${escapedlabelClass}>${escapedLabelText}<input value=${quoteType}${escapedOldValue}${quoteType}></label>`
+			const regexPattern = `<label${escapedlabelClass}>${escapedLabelText}<input value=${quoteType}${escapedOldValue}${quoteType}${labelClass}></label>`
 
 			return new RegExp(regexPattern, 'g')
 		}
@@ -316,7 +318,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			if (matchCount === 1) {
 				new Notice(`提示：笔记内容已修改`)
 			} else if (matchCount > 1) {
-				new Notice(`提醒：重复了 ${matchCount} 处`)
+				new Notice(`提示：重复了 ${matchCount} 处`)
 			} else if (matchCount < 1) {
 				new Notice(`警告：未找到对应的label标签文本`)
 			}

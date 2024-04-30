@@ -3,16 +3,22 @@ import { PluginSettingTab, Setting } from "obsidian"
 import { FolderSuggest } from "./suggesters/FolderSuggester"
 
 export interface ReadAssistPluginSettings {
+    data: WordComparedData[]
     mySetting: string
     articles_folder: string,
-    user_scripts_folder: string
+    is_mark_star: boolean
 }
 
 export const DEFAULT_SETTINGS: ReadAssistPluginSettings = {
+    data: [],
     mySetting: 'default',
     articles_folder: "",
-    user_scripts_folder: "",
+    is_mark_star: false
+}
 
+export interface WordComparedData {
+    fileName: string
+    fileContent: string
 }
 
 export class ReadAssistSettingTab extends PluginSettingTab {
@@ -25,17 +31,21 @@ export class ReadAssistSettingTab extends PluginSettingTab {
         this.containerEl.empty()
 
         this.add_material_folder_setting()
+        this.set_is_mark_star_setting()
+    }
 
-        // new Setting(this.containerEl)
-        //     .setName('Setting #1')
-        //     .setDesc('It\'s a secret')
-        //     .addText(text => text
-        //         .setPlaceholder('Enter your secret')
-        //         .setValue(this.plugin.settings.mySetting)
-        //         .onChange(async (value) => {
-        //             this.plugin.settings.mySetting = value;
-        //             await this.plugin.saveSettings();
-        //         }));
+    set_is_mark_star_setting(): void {
+        new Setting(this.containerEl)
+            .setName(("是否显示标记"))
+            .setDesc(("指定是否需要在阅读模式下显示标记的星星SVG"))
+            .addToggle(toggle => toggle.setValue(this.plugin.settings.is_mark_star)
+                .onChange((value) => {
+                    this.plugin.settings.is_mark_star = value
+                    this.plugin.saveSettings()
+                    setTimeout(() => {
+                        dispatchEvent(new Event("refresh-preview"))
+                    }, 100)
+                }))
     }
 
 

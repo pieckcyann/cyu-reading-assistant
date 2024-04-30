@@ -1,20 +1,31 @@
-import { WordData } from 'main';
+import ReadAssistPlugin, { RowData } from 'main';
 import { MarkdownView } from 'obsidian';
 import { ReadAssistPluginSettings } from 'settings/Settings';
 
-import React from 'react';
+import React, { ReactNode } from 'react';
+import { WordChecker } from 'func/WordMarkCheck';
 
-const Row = ({ word, meaning }: { word: string; meaning: string }) => (
-	<div className="row">
-		<div className="word-column">{word}</div>
+const Row = ({
+	word,
+	meaning,
+	isSentence,
+	isMarked,
+}: {
+	word: string;
+	meaning: string;
+	isSentence: boolean;
+	isMarked: boolean;
+}) => (
+	<div className={`row${isSentence ? ' sentence' : ''}`}>
+		<div className={`word-column${isMarked ? ' ra-star' : ''}`}>{word}</div>
 		<div className="symbol-column">-&gt;</div>
 		<div className="meaning-column">{meaning}</div>
 	</div>
 );
 
-export function createRow(word: string, meaning: string): React.ReactElement {
-	return <Row word={word} meaning={meaning} />;
-}
+// export function createRow(word: string, meaning: string): React.ReactElement {
+// 	return <Row word={word} meaning={meaning} />;
+// }
 
 export function createTopDiv(container: HTMLElement) {
 	const flashCardDiv = createEl('div');
@@ -48,27 +59,46 @@ const Wrapper = ({
 		</div>
 	);
 };
-
-export function createWrapper(leaf: MarkdownView, datasMap: WordData[]) {
+export async function createWrapper(
+	Plugin: ReadAssistPlugin,
+	leaf: MarkdownView,
+	datasMap: RowData[]
+) {
 	const wrapper = leaf.containerEl.find('.flash-card-wrapper');
-	if (wrapper == null) return;
+	if (wrapper == null) return null; // 如果 wrapper 为 null，则返回 null
 
-	const listItems = datasMap.map((data) => (
-		<Row key={data.word} word={data.word} meaning={data.meaning}></Row>
-	));
+	const listItems: ReactNode[] = [];
+	for (const data of datasMap) {
+		const isMarked = await WordChecker(
+			Plugin.app,
+			Plugin.pathToWordSets,
+			data.word
+		);
+
+		listItems.push(
+			<Row
+				key={data.word}
+				word={data.word}
+				meaning={data.meaning}
+				isSentence={data.isSentence}
+				isMarked={isMarked != null}
+			/>
+		);
+	}
 
 	return <Wrapper>{listItems}</Wrapper>;
 }
 
-export function removeRow(wrapper_dom: HTMLElement) {
+export function removeRow(container: HTMLElement) {
 	// 移除所有子元素
-	// while (wrapper_dom.firstChild) {
-	//     wrapper_dom.removeChild(wrapper_dom.firstChild)
-	// }
-	// 移除自身
-	// if (wrapper_dom.parentNode) {
-	//     wrapper_dom.parentNode.removeChild(wrapper_dom)
-	// }
+	while (container.firstChild) {
+		container.removeChild(container.firstChild);
+	}
 
-	wrapper_dom.innerHTML = '';
+	// 移除自身
+	if (container.parentNode) {
+		container.parentNode.removeChild(container);
+	}
+
+	// container.innerHTML = '';
 }

@@ -3,37 +3,48 @@ import { App, Editor, MarkdownPostProcessorContext, MarkdownView, Notice, Plugin
 import {
 	DEFAULT_SETTINGS,
 	ReadAssistPluginSettings,
-	ReadAssistSettingTab
+	ReadAssistSettingTab,
+	WordComparedData
 } from "settings/Settings"
 
-import ReadAssistance from "./core/ReadAssist"
+import ReadAssistance from "./ReadAssist"
 
 import {
 	addCommentForSource,
 	addCommentForPreview
-} from 'function/AddComment'
-import { parseActiveViewToComments } from 'function/ParseComment'
+} from 'func/AddComment'
+import { parseActiveViewToComments } from 'func/ParseComment'
 import {
 	createTopDiv,
-	createWrapper
+	createWrapper,
+	removeRow
 } from 'components/flashCardUI'
 
 import { createRoot } from 'react-dom/client'
+import { extractWordComparedDatas } from 'func/WordMarkCheck'
+// import { extractWordComparedDatas } from 'func/WordMarkCheck'
 
-export interface WordData {
+export interface RowData {
 	word: string
 	meaning: string
+	isSentence: boolean
 }
 
 export default class ReadAssistPlugin extends Plugin {
 
 	app: App
 	settings: ReadAssistPluginSettings
-	pathToWordSets = this.app.vault.configDir + "/mark-wordsets"
+	public data: WordComparedData[]
+	public pathToWordSets = this.app.vault.configDir + "/mark-wordsets"
 
 	async onload() {
 		await this.loadSettings()
+
 		this.addSettingTab(new ReadAssistSettingTab(this))
+
+		this.settings.data = await extractWordComparedDatas(this.app, this.pathToWordSets)
+		this.saveSettings()
+		// new Notice(`${this.settings.data[0].fileName}`)
 
 		if (!await this.app.vault.adapter.exists(this.pathToWordSets)) {
 			await this.app.vault.createFolder(this.pathToWordSets)
@@ -45,6 +56,10 @@ export default class ReadAssistPlugin extends Plugin {
 	}
 
 	unload() {
+		const activeLeafView = this.app.workspace.getActiveViewOfType(MarkdownView)
+		if (activeLeafView == null) return
+		const topDiv = activeLeafView.containerEl.find('.flash-card-div')
+		removeRow(topDiv)
 	}
 
 	registerEvents = async () => {
@@ -75,7 +90,6 @@ export default class ReadAssistPlugin extends Plugin {
 	renderLabelAndInput = () => {
 		this.registerMarkdownPostProcessor(
 			async (el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
-
 				const isSetDirectory = ctx.sourcePath.startsWith(this.settings.articles_folder)
 				if (isSetDirectory) {
 					const activeLeafView = this.app.workspace.getActiveViewOfType(MarkdownView)
@@ -107,7 +121,7 @@ export default class ReadAssistPlugin extends Plugin {
 		const topDiv = activeLeafView.containerEl.find('.flash-card-div')
 		const root = createRoot(topDiv)
 
-		let wordDataArray: WordData[] = []
+		let wordDataArray: RowData[] = []
 		await parseActiveViewToComments(
 			activeFileText,
 			(Array) => {
@@ -116,7 +130,7 @@ export default class ReadAssistPlugin extends Plugin {
 				wordDataArray = Array
 			}
 		)
-		const wrapper = createWrapper(activeLeafView, wordDataArray)
+		const wrapper = await createWrapper(this, activeLeafView, wordDataArray)
 		root.render(wrapper)
 	}
 
@@ -130,7 +144,7 @@ export default class ReadAssistPlugin extends Plugin {
 		const topDiv = activeLeafView.containerEl.find('.flash-card-div')
 		const root = createRoot(topDiv)
 
-		let wordDataArray: WordData[] = []
+		let wordDataArray: RowData[] = []
 		await parseActiveViewToComments(
 			activeFileText,
 			(Array) => {
@@ -139,7 +153,7 @@ export default class ReadAssistPlugin extends Plugin {
 				wordDataArray = Array
 			}
 		)
-		const wrapper = createWrapper(activeLeafView, wordDataArray)
+		const wrapper = await createWrapper(this, activeLeafView, wordDataArray)
 		root.render(wrapper)
 	}
 
@@ -217,12 +231,38 @@ export default class ReadAssistPlugin extends Plugin {
 
 	onunload() { }
 
-	// data.json
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await super.loadData())
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings)
+		await super.saveData(this.settings)
 	}
+
+
+	// data.json
+	// public async loadData(): Promise<void> {
+	// 	// const wordComparedDataArray = await extractWordComparedDatas(this.app, this.pathToWordSets)
+	// 	// await this.saveData(wordComparedDataArray)
+
+	// 	this.data = Object.assign({}, await super.loadData())
+	// 	new Notice(this.data[0].fileName)
+	// }
+
+	// public async saveData(comparedDataArray: WordComparedData[]): Promise<void> {
+	// 	// const newData: { [key: string]: WordComparedData } = {}
+
+	// 	// comparedDataArray.forEach((data) => {
+	// 	// 	newData[data.fileName] = data
+	// 	// })
+
+	// 	// await super.saveData(newData)
+
+	// 	const newData = comparedDataArray.map((data) => ({
+	// 		fileName: data.fileName,
+	// 		fileContent: data.fileContent
+	// 	}))
+
+	// 	await super.saveData({ comparedData: newData })
+	// }
 }
