@@ -3,15 +3,13 @@ import { PluginSettingTab, Setting } from "obsidian"
 import { FolderSuggest } from "./suggesters/FolderSuggester"
 
 export interface ReadAssistPluginSettings {
-    data: WordComparedData[]
-    mySetting: string
+    word_sets_data: WordComparedData[]
     articles_folder: string,
     is_mark_star: boolean
 }
 
 export const DEFAULT_SETTINGS: ReadAssistPluginSettings = {
-    data: [],
-    mySetting: 'default',
+    word_sets_data: [],
     articles_folder: "",
     is_mark_star: false
 }
@@ -27,7 +25,6 @@ export class ReadAssistSettingTab extends PluginSettingTab {
     }
 
     display(): void {
-
         this.containerEl.empty()
 
         this.add_material_folder_setting()

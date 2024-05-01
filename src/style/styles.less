@@ -281,9 +281,14 @@ label {
     color: var(--text-normal);
     border-bottom: 1px solid rgba(@comment-bg-blue, 1);
     background-color: rgba(@comment-bg-blue, @label-opacity-blue);
+    transition: background-color 0.2s ease;
 
     &:active {
         background-color: rgba(@comment-bg-blue, 0.5);
+    }
+
+    &.located {
+        background-color: aqua;
     }
 
     del {

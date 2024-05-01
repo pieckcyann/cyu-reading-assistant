@@ -56,16 +56,16 @@ export async function parseActiveViewToComments(
     const regExpText = `(?:(?!<[^>]+>).)*`
 
     const regExpSingleWord = new RegExp(
-        `<label>(${regExpText})<input\\s+value=["']([^"']+)["']>\\s*<\\/label>`,
+        `<label>(${regExpText})<input value=["']([^"']+)["']><\\/label>`,
         'gm')
 
     const regExpNonPrototype = new RegExp(
-        `<label>${regExpText}<del\\s+data-prototype=["']([^"']+)["']>${regExpText}<\\/del>${regExpText}<input\\s+value=["']([^"']+)["']><\\/label>`,
+        `<label>${regExpText}<del data-prototype=["']([^"']+)["']>${regExpText}<\\/del>${regExpText}<input\\s+value=["']([^"']+)["']><\\/label>`,
         'gm')
 
     const regExpSentence = new RegExp(
         // `<label class="sentence">((?:(?!<label class="sentence">).)*?(?=(<input\\s+value=["'][^"']+["']><\\/label>).)+)<input\\s+value=["']([^"']+)["']><\\/label>`,
-        `<label class="sentence">([\\s\\S]*?)<input\\s+value=["']([^"']+)["'] class="sentence">\\s*<\\/label>`,
+        `<label class="sentence">([\\s\\S]*?)<input value=["']([^"']+)["'] class="sentence">\\s*<\\/label>`,
         'gm'
     )
 
@@ -80,7 +80,7 @@ export async function parseActiveViewToComments(
                 if (match[1] && match[2]) {
                     const word = match[1]
                     const meaning = match[2]
-                    matches.push({ word, meaning, isSentence: false })
+                    matches.push({ word, meaning, line: lineNumber, isSentence: false })
                 }
             }
 
@@ -90,7 +90,7 @@ export async function parseActiveViewToComments(
                 if (match[1] && match[2]) {
                     const word = match[1]
                     const meaning = match[2]
-                    matches.push({ word, meaning, isSentence: false })
+                    matches.push({ word, meaning, line: lineNumber, isSentence: false })
                 }
             }
 
@@ -101,7 +101,7 @@ export async function parseActiveViewToComments(
                     const word = match[1].replace(/<[^>]+>/g, '')
 
                     const meaning = match[2]
-                    matches.push({ word, meaning, isSentence: true })
+                    matches.push({ word, meaning, line: lineNumber, isSentence: true })
                 }
             }
 
@@ -109,7 +109,7 @@ export async function parseActiveViewToComments(
             const sortedMatches = matches.sort((a, b) => lineContent.indexOf(a.word) - lineContent.indexOf(b.word))
 
             // Push sorted matches to wordDataArray
-            sortedMatches.forEach(({ word, meaning, isSentence }) => wordDataArray.push({ word, meaning, isSentence }))
+            sortedMatches.forEach(({ word, meaning, line, isSentence }) => wordDataArray.push({ word, meaning, line, isSentence }))
         })
 
     callback(wordDataArray)

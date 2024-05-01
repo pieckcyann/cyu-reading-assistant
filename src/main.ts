@@ -18,15 +18,15 @@ import {
 	createTopDiv,
 	createWrapper,
 	removeRow
-} from 'components/flashCardUI'
+} from 'components/WordListUI'
 
 import { createRoot } from 'react-dom/client'
 import { extractWordComparedDatas } from 'func/WordMarkCheck'
-// import { extractWordComparedDatas } from 'func/WordMarkCheck'
 
 export interface RowData {
 	word: string
 	meaning: string
+	line: number
 	isSentence: boolean
 }
 
@@ -42,20 +42,19 @@ export default class ReadAssistPlugin extends Plugin {
 
 		this.addSettingTab(new ReadAssistSettingTab(this))
 
-		this.settings.data = await extractWordComparedDatas(this.app, this.pathToWordSets)
-		this.saveSettings()
-		// new Notice(`${this.settings.data[0].fileName}`)
-
-		if (!await this.app.vault.adapter.exists(this.pathToWordSets)) {
+		if (!await this.app.vault.adapter.exists(this.pathToWordSets))
 			await this.app.vault.createFolder(this.pathToWordSets)
-		}
+
+		// Reads all wordsets in the'mark-wordsets' directory
+		this.settings.word_sets_data = await extractWordComparedDatas(this.app, this.pathToWordSets)
+		this.saveSettings()
 
 		await this.registerEvents()
 
 		this.registerCommands()
 	}
 
-	unload() {
+	onunload() {
 		const activeLeafView = this.app.workspace.getActiveViewOfType(MarkdownView)
 		if (activeLeafView == null) return
 		const topDiv = activeLeafView.containerEl.find('.flash-card-div')
@@ -71,15 +70,14 @@ export default class ReadAssistPlugin extends Plugin {
 			this.renderWordList()
 		}))
 
-		// this.registerEvent(this.app.workspace.on("file-open", () => {
-		// 	this.render()
-		// 	new Notice('xxxxxxxxxxxxxxxxx')
-		// }))
-
 		this.registerEvent(this.app.metadataCache.on("resolved", () => {
 			this.updateWordList()
 		}))
 
+		// this.registerEvent(this.app.workspace.on("file-open", () => {
+		// 	this.render()
+		// 	new Notice('xxxxxxxxxxxxxxxxx')
+		// }))
 	}
 
 	render = async () => {
@@ -124,13 +122,11 @@ export default class ReadAssistPlugin extends Plugin {
 		let wordDataArray: RowData[] = []
 		await parseActiveViewToComments(
 			activeFileText,
-			(Array) => {
-				// console.log(`[cyu]: ${word}`)
-				// console.log(`[cyu]: ${meaning}`)
-				wordDataArray = Array
+			(array) => {
+				wordDataArray = array
 			}
 		)
-		const wrapper = await createWrapper(this, activeLeafView, wordDataArray)
+		const wrapper = createWrapper(this, activeLeafView, wordDataArray)
 		root.render(wrapper)
 	}
 
@@ -147,13 +143,11 @@ export default class ReadAssistPlugin extends Plugin {
 		let wordDataArray: RowData[] = []
 		await parseActiveViewToComments(
 			activeFileText,
-			(Array) => {
-				// console.log(`[cyu]: ${word}`)
-				// console.log(`[cyu]: ${meaning}`)
-				wordDataArray = Array
+			(array) => {
+				wordDataArray = array
 			}
 		)
-		const wrapper = await createWrapper(this, activeLeafView, wordDataArray)
+		const wrapper = createWrapper(this, activeLeafView, wordDataArray)
 		root.render(wrapper)
 	}
 
@@ -229,8 +223,6 @@ export default class ReadAssistPlugin extends Plugin {
 		})
 	}
 
-	onunload() { }
-
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await super.loadData())
 	}
@@ -238,31 +230,4 @@ export default class ReadAssistPlugin extends Plugin {
 	async saveSettings() {
 		await super.saveData(this.settings)
 	}
-
-
-	// data.json
-	// public async loadData(): Promise<void> {
-	// 	// const wordComparedDataArray = await extractWordComparedDatas(this.app, this.pathToWordSets)
-	// 	// await this.saveData(wordComparedDataArray)
-
-	// 	this.data = Object.assign({}, await super.loadData())
-	// 	new Notice(this.data[0].fileName)
-	// }
-
-	// public async saveData(comparedDataArray: WordComparedData[]): Promise<void> {
-	// 	// const newData: { [key: string]: WordComparedData } = {}
-
-	// 	// comparedDataArray.forEach((data) => {
-	// 	// 	newData[data.fileName] = data
-	// 	// })
-
-	// 	// await super.saveData(newData)
-
-	// 	const newData = comparedDataArray.map((data) => ({
-	// 		fileName: data.fileName,
-	// 		fileContent: data.fileContent
-	// 	}))
-
-	// 	await super.saveData({ comparedData: newData })
-	// }
 }

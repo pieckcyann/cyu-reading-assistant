@@ -3,29 +3,71 @@ import { MarkdownView } from 'obsidian';
 import { ReadAssistPluginSettings } from 'settings/Settings';
 
 import React, { ReactNode } from 'react';
-import { WordChecker } from 'func/WordMarkCheck';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { WordComparator } from 'func/WordMarkCheck';
 
 const Row = ({
+	plugin,
 	word,
 	meaning,
+	line,
 	isSentence,
 	isMarked,
 }: {
+	plugin: ReadAssistPlugin;
 	word: string;
 	meaning: string;
+	line: number;
 	isSentence: boolean;
 	isMarked: boolean;
 }) => (
-	<div className={`row${isSentence ? ' sentence' : ''}`}>
+	<div
+		className={`row${isSentence ? ' sentence' : ''}`}
+		onClick={() => {
+			onClickHandle(plugin, line, word);
+		}}
+	>
 		<div className={`word-column${isMarked ? ' ra-star' : ''}`}>{word}</div>
 		<div className="symbol-column">-&gt;</div>
 		<div className="meaning-column">{meaning}</div>
 	</div>
 );
 
-// export function createRow(word: string, meaning: string): React.ReactElement {
-// 	return <Row word={word} meaning={meaning} />;
-// }
+const onClickHandle = (
+	plugin: ReadAssistPlugin,
+	line: number,
+	word: string
+) => {
+	const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+	if (view == null) return;
+
+	const labels = view.containerEl.findAll('label');
+	for (const label of labels) {
+		// don't highlight sentences
+		if (!label.classList.contains('sentence')) {
+			let wordOfLabel = label.textContent?.replace(/<[^>]+>/g, '') ?? '';
+			const del = label.find('del');
+			if (del) {
+				wordOfLabel = del.getAttribute('data-prototype') ?? '';
+			}
+
+			if (wordOfLabel.contains(word)) {
+				// label.addClass('located');
+				label.style.backgroundColor = 'aqua';
+
+				// Remove the background-color after two seconds
+				setTimeout(() => {
+					// label.removeClass('located');
+					label.style.backgroundColor = '';
+				}, 2000);
+			}
+		}
+	}
+
+	const scrollToPosition = line;
+	const state = { scroll: scrollToPosition - 1 };
+	view.setEphemeralState(state);
+};
 
 export function createTopDiv(container: HTMLElement) {
 	const flashCardDiv = createEl('div');
@@ -59,29 +101,27 @@ const Wrapper = ({
 		</div>
 	);
 };
-export async function createWrapper(
+export function createWrapper(
 	Plugin: ReadAssistPlugin,
 	leaf: MarkdownView,
 	datasMap: RowData[]
 ) {
 	const wrapper = leaf.containerEl.find('.flash-card-wrapper');
-	if (wrapper == null) return null; // 如果 wrapper 为 null，则返回 null
+	if (wrapper == null) return null;
 
 	const listItems: ReactNode[] = [];
 	for (const data of datasMap) {
-		const isMarked = await WordChecker(
-			Plugin.app,
-			Plugin.pathToWordSets,
-			data.word
-		);
+		const isMarked = WordComparator(Plugin.settings.word_sets_data, data.word);
 
 		listItems.push(
 			<Row
-				key={data.word}
+				plugin={Plugin}
+				key={data.word + data.meaning}
 				word={data.word}
 				meaning={data.meaning}
+				line={data.line}
 				isSentence={data.isSentence}
-				isMarked={isMarked != null}
+				isMarked={isMarked}
 			/>
 		);
 	}

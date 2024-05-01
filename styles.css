@@ -198,9 +198,13 @@ label {
   color: var(--text-normal);
   border-bottom: 1px solid rgba(0, 114, 208, 1);
   background-color: rgba(0, 114, 208, 0.04);
+  transition: background-color 0.2s ease;
 }
 label:active {
   background-color: rgba(0, 114, 208, 0.5);
+}
+label.located {
+  background-color: aqua;
 }
 label del {
   text-decoration: none;

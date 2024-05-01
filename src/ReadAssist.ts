@@ -189,8 +189,6 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			checkChildrenDelTag(label, labelText)
 
 			await this.updateInputValueInFile(labelText.value, oldValue, newValue, label.classList.contains('sentence'))
-
-			// this.updateRowNode(oldValue, newValue)
 		}
 
 		function checkChildrenDelTag(label: HTMLElement, labelTextObj: { value: string }) {
@@ -202,7 +200,6 @@ export default class ReadAssistance extends MarkdownRenderChild {
 					delText,
 					`<del data-prototype="${delAttr}">${delText}</del>`
 				)
-				// this.wordMap.setKeyValue(`${delAttr}`, delText)
 			}
 		}
 
