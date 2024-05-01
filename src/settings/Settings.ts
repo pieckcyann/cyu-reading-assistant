@@ -5,13 +5,15 @@ import { FolderSuggest } from "./suggesters/FolderSuggester"
 export interface ReadAssistPluginSettings {
     word_sets_data: WordComparedData[]
     articles_folder: string,
-    is_mark_star: boolean
+    is_mark_star: boolean,
+    is_show_word_list: boolean
 }
 
 export const DEFAULT_SETTINGS: ReadAssistPluginSettings = {
     word_sets_data: [],
     articles_folder: "",
-    is_mark_star: false
+    is_mark_star: false,
+    is_show_word_list: false
 }
 
 export interface WordComparedData {
@@ -29,22 +31,8 @@ export class ReadAssistSettingTab extends PluginSettingTab {
 
         this.add_material_folder_setting()
         this.set_is_mark_star_setting()
+        this.set_is_show_word_list_setting()
     }
-
-    set_is_mark_star_setting(): void {
-        new Setting(this.containerEl)
-            .setName(("是否显示标记"))
-            .setDesc(("指定是否需要在阅读模式下显示标记的星星SVG"))
-            .addToggle(toggle => toggle.setValue(this.plugin.settings.is_mark_star)
-                .onChange((value) => {
-                    this.plugin.settings.is_mark_star = value
-                    this.plugin.saveSettings()
-                    setTimeout(() => {
-                        dispatchEvent(new Event("refresh-preview"))
-                    }, 100)
-                }))
-    }
-
 
     add_material_folder_setting(): void {
         new Setting(this.containerEl)
@@ -61,6 +49,31 @@ export class ReadAssistSettingTab extends PluginSettingTab {
                 // @ts-ignore
                 cb.containerEl.addClass("templater_search")
             })
+    }
+
+    set_is_mark_star_setting(): void {
+        new Setting(this.containerEl)
+            .setName(("默认是否显示标记"))
+            .setDesc(("指定是否需要在阅读模式下显示标记的星星SVG"))
+            .addToggle(toggle => toggle.setValue(this.plugin.settings.is_mark_star)
+                .onChange((value) => {
+                    this.plugin.settings.is_mark_star = value
+                    this.plugin.saveSettings()
+                    setTimeout(() => {
+                        dispatchEvent(new Event("refresh-preview"))
+                    }, 100)
+                }))
+    }
+
+    set_is_show_word_list_setting(): void {
+        new Setting(this.containerEl)
+            .setName(("默认是否显示单词列表"))
+            .setDesc(("指定是否默认一直显示单词列表"))
+            .addToggle(toggle => toggle.setValue(this.plugin.settings.is_show_word_list)
+                .onChange((value) => {
+                    this.plugin.settings.is_show_word_list = value
+                    this.plugin.saveSettings()
+                }))
     }
 
 }

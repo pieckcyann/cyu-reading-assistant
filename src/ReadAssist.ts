@@ -1,6 +1,6 @@
 import { App, MarkdownRenderChild, MarkdownView, Notice, TFile } from 'obsidian'
 import { ReadAssistPluginSettings } from 'settings/Settings'
-import { WordChecker } from 'func/WordMarkCheck'
+import { WordComparator } from 'func/WordMarkCheck'
 import { iterateLabels } from './func/ParseComment'
 import {
 	mountWordCounter,
@@ -76,7 +76,13 @@ export default class ReadAssistance extends MarkdownRenderChild {
 					checkboxInput.type = 'checkbox'
 					label.insertBefore(checkboxInput, inputs[0])
 					inputs[0].type = 'text'
-					const textInput = inputs[1]
+
+					let textInput
+					if (label.classList.contains('sentence') || label.classList.contains('nested')) {
+						textInput = inputs[inputs.length - 1]
+					} else {
+						textInput = inputs[1]
+					}
 
 					// 修复嵌套label的点击事件混乱
 					label.addEventListener('click', (event) => {
@@ -96,46 +102,17 @@ export default class ReadAssistance extends MarkdownRenderChild {
 						navigator.clipboard.writeText(copyText)
 					})
 
+					// 添加星标span
 					if (this.settings.is_mark_star == true) {
-						// 添加星标span
-						await this.checkWordMarked(label, textInput)
+						const isMarked = WordComparator(this.settings.word_sets_data, label.textContent ?? '')
+						if (isMarked) {
+							const starSpan = document.createElement('span')
+							starSpan.addClass('ra-star')
+							label.appendChild(starSpan)
+						}
 					}
 				}
 			})
-	}
-
-	async checkWordMarked(label: HTMLLabelElement, textInput: HTMLInputElement) {
-		if (label.classList.contains('sentence')) return
-
-		const textContent = (label.textContent ?? '').toLowerCase()
-		const inputValue = textInput.value.split(' ')[0].toLowerCase()
-		const isValidInput = /^[a-zA-Z]+$/.test(inputValue)
-
-		const wordExists = async (word: string) => {
-			return await WordChecker(app, this.pathToWordSets, word)
-		}
-
-		if (isValidInput) {
-			const word1Exists = await wordExists(textContent)
-			const word2Exists = await wordExists(inputValue)
-
-			if (word1Exists || word2Exists) {
-				if (textContent != word1Exists) console.log(`marked: ${textContent} -> ${word1Exists}`)
-				if (inputValue != word1Exists) console.log(`marked: ${inputValue} -> ${word2Exists}`)
-				const starSpan = document.createElement('span')
-				starSpan.addClass('ra-star')
-				label.appendChild(starSpan)
-			}
-		} else {
-			const word1Exists = await wordExists(textContent)
-
-			if (word1Exists) {
-				if (textContent != word1Exists) console.log(`marked: ${textContent} -> ${word1Exists}`)
-				const starSpan = document.createElement('span')
-				starSpan.addClass('ra-star')
-				label.appendChild(starSpan)
-			}
-		}
 	}
 
 	async setForInputs(): Promise<void> {
@@ -188,7 +165,12 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			checkChildrenLabelTag(label, labelText)
 			checkChildrenDelTag(label, labelText)
 
-			await this.updateInputValueInFile(labelText.value, oldValue, newValue, label.classList.contains('sentence'))
+			await this.updateInputValueInFile(
+				labelText.value,
+				oldValue, newValue,
+				label.classList.contains('sentence'),
+				label.classList.contains('nested'),
+			)
 		}
 
 		function checkChildrenDelTag(label: HTMLElement, labelTextObj: { value: string }) {
@@ -254,13 +236,21 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		labelText: string,
 		oldValue: string,
 		newValue: string,
-		isSentence: boolean
+		isSentence: boolean,
+		isNested: boolean
 	): Promise<void> {
-		// const file = this.activeLeafView.file
 		const file = this.activeFile
 		if (!file) return
 		const fileContent = await this.app.vault.read(file)
-		const labelClass = isSentence ? ' class="sentence"' : ''
+
+		let labelClass
+		if (isSentence) {
+			labelClass = ' class="sentence"'
+		} else if (isNested) {
+			labelClass = ' class="nested"'
+		} else {
+			labelClass = ''
+		}
 
 		let regex = getRegexForLabel(labelText, oldValue, labelClass)
 		const linkRegex = /\[([^\]]+)\]\(\)/g

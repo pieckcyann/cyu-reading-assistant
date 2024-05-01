@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { App, Editor, MarkdownPostProcessorContext, MarkdownView, Notice, Plugin, debounce } from 'obsidian'
 import {
 	DEFAULT_SETTINGS,
@@ -17,7 +17,9 @@ import { parseActiveViewToComments } from 'func/ParseComment'
 import {
 	createTopDiv,
 	createWrapper,
-	removeRow
+	getScrollTopWrapper,
+	removeRow,
+	setScrollTopWrapper
 } from 'components/WordListUI'
 
 import { createRoot } from 'react-dom/client'
@@ -42,14 +44,14 @@ export default class ReadAssistPlugin extends Plugin {
 
 		this.addSettingTab(new ReadAssistSettingTab(this))
 
+		await this.registerEvents()
+
 		if (!await this.app.vault.adapter.exists(this.pathToWordSets))
 			await this.app.vault.createFolder(this.pathToWordSets)
 
 		// Reads all wordsets in the'mark-wordsets' directory
 		this.settings.word_sets_data = await extractWordComparedDatas(this.app, this.pathToWordSets)
 		this.saveSettings()
-
-		await this.registerEvents()
 
 		this.registerCommands()
 	}
@@ -65,6 +67,7 @@ export default class ReadAssistPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(async () => {
 			this.render()
 		})
+
 
 		this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
 			this.renderWordList()
@@ -134,6 +137,9 @@ export default class ReadAssistPlugin extends Plugin {
 		const activeLeafView = this.app.workspace.getActiveViewOfType(MarkdownView)
 		if (activeLeafView == null) return
 
+		// const scrollPosition = await getScrollTopWrapper(this)
+		// const scrollPosition = 482
+
 		const activeFileText = activeLeafView.currentMode.get()
 
 		createTopDiv(activeLeafView.containerEl)
@@ -149,6 +155,10 @@ export default class ReadAssistPlugin extends Plugin {
 		)
 		const wrapper = createWrapper(this, activeLeafView, wordDataArray)
 		root.render(wrapper)
+
+		// setTimeout(() => {
+		// 	setScrollTopWrapper(this, scrollPosition)
+		// }, 0)
 	}
 
 	registerCommands() {
@@ -223,6 +233,7 @@ export default class ReadAssistPlugin extends Plugin {
 		})
 	}
 
+	// data.json
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await super.loadData())
 	}

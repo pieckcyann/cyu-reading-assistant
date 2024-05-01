@@ -19,13 +19,9 @@ export function iterateLabels(
     }
 }
 
-/**
- * @deprecated
- */
-
-export function getComments(
+export function parseAllComments(
     containerEl: HTMLElement,
-    callback: (word: string, meaning: string) => void
+    callback: (label: HTMLElement, word: string, meaning: string) => void
 ) {
     const labels = containerEl.findAll('label') as HTMLLabelElement[]
     for (const label of labels) {
@@ -34,13 +30,24 @@ export function getComments(
         const inputs = [...directInputs, ...grandchildrenInputs]
 
         let word = label.innerText
+        let meaning = inputs[1].value
+
         const del = label.querySelector('del')
         if (del) {
             word = del.getAttribute('data-prototype') || word
         }
 
-        const meaning = inputs[1].value
-        callback(word, meaning)
+        if (label.classList.contains('sentence')) {
+            word = label.innerHTML?.replace(/<[^>]+>/g, '') ?? ''
+            meaning = (label.findAllSelf('input.sentence')[0] as HTMLInputElement).value
+        }
+
+        if (label.classList.contains('nested')) {
+            word = label.innerHTML?.replace(/<[^>]+>/g, '') ?? ''
+            meaning = (label.findAllSelf('input.nested')[0] as HTMLInputElement).value
+        }
+
+        callback(label, word, meaning)
     }
 }
 
@@ -57,11 +64,18 @@ export async function parseActiveViewToComments(
 
     const regExpSingleWord = new RegExp(
         `<label>(${regExpText})<input value=["']([^"']+)["']><\\/label>`,
-        'gm')
+        'gm'
+    )
+
+    const regExpNestedWord = new RegExp(
+        `<label class="nested">([\\s\\S]*?)<input value=["']([^"']+)["'] class="nested">\\s*<\\/label>`,
+        'gm'
+    )
 
     const regExpNonPrototype = new RegExp(
         `<label>${regExpText}<del data-prototype=["']([^"']+)["']>${regExpText}<\\/del>${regExpText}<input\\s+value=["']([^"']+)["']><\\/label>`,
-        'gm')
+        'gm'
+    )
 
     const regExpSentence = new RegExp(
         // `<label class="sentence">((?:(?!<label class="sentence">).)*?(?=(<input\\s+value=["'][^"']+["']><\\/label>).)+)<input\\s+value=["']([^"']+)["']><\\/label>`,
@@ -79,6 +93,17 @@ export async function parseActiveViewToComments(
             for (const match of signleWordMatches) {
                 if (match[1] && match[2]) {
                     const word = match[1]
+                    const meaning = match[2]
+                    matches.push({ word, meaning, line: lineNumber, isSentence: false })
+                }
+            }
+
+            // <label><label>meaning<input value=""></label><input value=""></label>
+            const nestedWordMatches = lineContent.matchAll(regExpNestedWord)
+            for (const match of nestedWordMatches) {
+                if (match[1] && match[2]) {
+                    const word = match[1].replace(/<[^>]+>/g, '')
+
                     const meaning = match[2]
                     matches.push({ word, meaning, line: lineNumber, isSentence: false })
                 }
@@ -106,7 +131,12 @@ export async function parseActiveViewToComments(
             }
 
             // Sort matches based on their appearance in lineContent
-            const sortedMatches = matches.sort((a, b) => lineContent.indexOf(a.word) - lineContent.indexOf(b.word))
+            const sortedMatches =
+                matches.sort((a, b) => {
+                    const indexA = lineContent.indexOf(a.meaning) // Sort by a.meaning instead of a.word
+                    const indexB = lineContent.indexOf(b.meaning)
+                    return indexA - indexB
+                })
 
             // Push sorted matches to wordDataArray
             sortedMatches.forEach(({ word, meaning, line, isSentence }) => wordDataArray.push({ word, meaning, line, isSentence }))

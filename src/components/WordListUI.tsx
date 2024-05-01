@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import ReadAssistPlugin, { RowData } from 'main';
-import { MarkdownView } from 'obsidian';
+import { MarkdownView, Notice } from 'obsidian';
 import { ReadAssistPluginSettings } from 'settings/Settings';
 
-import React, { ReactNode } from 'react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import React, { useRef, useEffect, useState } from 'react';
 import { WordComparator } from 'func/WordMarkCheck';
+import { parseAllComments } from 'func/ParseComment';
 
 const Row = ({
 	plugin,
@@ -24,49 +25,42 @@ const Row = ({
 	<div
 		className={`row${isSentence ? ' sentence' : ''}`}
 		onClick={() => {
-			onClickHandle(plugin, line, word);
+			onClickHandle(plugin, line, word, meaning);
 		}}
 	>
 		<div className={`word-column${isMarked ? ' ra-star' : ''}`}>{word}</div>
-		<div className="symbol-column">-&gt;</div>
-		<div className="meaning-column">{meaning}</div>
+		<div className={`symbol-column`}>-&gt;</div>
+		<div className={`meaning-column`}>{meaning}</div>
 	</div>
 );
 
 const onClickHandle = (
 	plugin: ReadAssistPlugin,
 	line: number,
-	word: string
+	wordOfLabel: string,
+	meaningOfLabel: string
 ) => {
 	const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
 	if (view == null) return;
 
-	const labels = view.containerEl.findAll('label');
-	for (const label of labels) {
-		// don't highlight sentences
-		if (!label.classList.contains('sentence')) {
-			let wordOfLabel = label.textContent?.replace(/<[^>]+>/g, '') ?? '';
-			const del = label.find('del');
-			if (del) {
-				wordOfLabel = del.getAttribute('data-prototype') ?? '';
-			}
-
-			if (wordOfLabel.contains(word)) {
-				// label.addClass('located');
-				label.style.backgroundColor = 'aqua';
-
-				// Remove the background-color after two seconds
-				setTimeout(() => {
-					// label.removeClass('located');
-					label.style.backgroundColor = '';
-				}, 2000);
-			}
-		}
-	}
-
 	const scrollToPosition = line;
 	const state = { scroll: scrollToPosition - 1 };
 	view.setEphemeralState(state);
+
+	parseAllComments(
+		view.containerEl,
+		(label: HTMLElement, word: string, meaning: string) => {
+			if (wordOfLabel == word && meaningOfLabel == meaning) {
+				label.style.backgroundColor = 'aqua';
+
+				setTimeout(() => {
+					label.style.backgroundColor = '';
+				}, 1000);
+
+				return;
+			}
+		}
+	);
 };
 
 export function createTopDiv(container: HTMLElement) {
@@ -84,23 +78,45 @@ export function createTopDiv(container: HTMLElement) {
 		?.insertAdjacentElement('beforebegin', flashCardDiv);
 }
 
+export const getScrollTopWrapper = async (Plugin: ReadAssistPlugin): Promise<number> => {
+	const wrapperRef = Plugin.app.workspace
+		.getActiveViewOfType(MarkdownView)
+		?.containerEl.querySelector('.flash-card-wrapper') as HTMLDivElement | null;
+
+	if (wrapperRef) {
+		return wrapperRef.scrollTop;
+	}
+
+	return 0; // Return a default value if wrapperRef is null
+};
+
+export const setScrollTopWrapper = (Plugin: ReadAssistPlugin, newValue: number) => {
+	const wrapperRef = Plugin.app.workspace
+		.getActiveViewOfType(MarkdownView)
+		?.containerEl.find('.flash-card-wrapper') as HTMLDivElement | null;
+
+	if (wrapperRef) {
+		wrapperRef.scrollTop = newValue;
+	}
+};
+
 const Wrapper = ({
-	settings,
+	plugin,
 	children,
 }: {
-	settings?: ReadAssistPluginSettings;
-	children?: React.ReactNode;
-}) => {
-	return (
-		<div
-			className="flash-card-wrapper"
-			onMouseEnter={() => console.log('Mouse entered')}
-			onMouseLeave={() => console.log('Mouse left')}
-		>
-			{children}
-		</div>
-	);
-};
+	plugin: ReadAssistPlugin;
+	children: React.ReactNode;
+}) => (
+	<div
+		// className="flash-card-wrapper"
+		className={`flash-card-wrapper${plugin.settings.is_show_word_list ? '' : ' hide'}`}
+		// onMouseEnter={() => console.log('Mouse entered')}
+		// onMouseLeave={() => console.log('Mouse left')}
+	>
+		{children}
+	</div>
+);
+
 export function createWrapper(
 	Plugin: ReadAssistPlugin,
 	leaf: MarkdownView,
@@ -109,7 +125,7 @@ export function createWrapper(
 	const wrapper = leaf.containerEl.find('.flash-card-wrapper');
 	if (wrapper == null) return null;
 
-	const listItems: ReactNode[] = [];
+	const listItems: React.ReactNode[] = [];
 	for (const data of datasMap) {
 		const isMarked = WordComparator(Plugin.settings.word_sets_data, data.word);
 
@@ -126,7 +142,7 @@ export function createWrapper(
 		);
 	}
 
-	return <Wrapper>{listItems}</Wrapper>;
+	return <Wrapper plugin={Plugin}>{listItems}</Wrapper>;
 }
 
 export function removeRow(container: HTMLElement) {
