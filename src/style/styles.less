@@ -102,12 +102,13 @@
             border: 1px solid rgba(@comment-bg-blue, 1);
             background-color: #efefe8;
 
-            animation: lineAppear-72a6a55b 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            // animation: lineAppear-72a6a55b 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            animation: lineAppear-72a6a55b 250ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
             transition: box-shadow 100ms ease;
 
             @keyframes lineAppear-72a6a55b {
                 0% {
-                    transform: translateX(1rem);
+                    transform: translateX(5px);
                 }
 
                 100% {
@@ -151,6 +152,7 @@
 
             .word-column {
                 flex: 4;
+                font-size: 1rem;
             }
 
             .symbol-column {
@@ -159,6 +161,7 @@
 
             .meaning-column {
                 flex: 4;
+                white-space: pre-wrap; // Allowing using '\n' for line breaks
 
                 &.hide-meaning {
                     // line-height: 0;
@@ -293,7 +296,7 @@ label {
     color: var(--text-normal);
     border-bottom: 1px solid rgba(@comment-bg-blue, 1);
     background-color: rgba(@comment-bg-blue, @label-opacity-blue);
-    transition: background-color 0.2s ease;
+    transition: background-color 0.15s ease;
 
     &:active {
         background-color: rgba(@comment-bg-blue, 0.5);
@@ -314,6 +317,7 @@ label {
 
             &:checked+[type="text"] {
                 display: inline-block;
+                // visibility: visible;
             }
         }
 
@@ -322,6 +326,7 @@ label {
             color: @comment-text-color;
             z-index: 1;
             display: none;
+            // visibility: hidden;
             text-align: left;
             border-radius: 6px;
             position: absolute;
@@ -341,6 +346,19 @@ label {
             // transform: translate(-50%, -50%);
             transition: color 0.1s ease-in-out, width 0.2s ease-in-out;
             z-index: 3;
+
+            animation: lineAppear-72a8t55c 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+
+            @keyframes lineAppear-72a8t55c {
+
+                0% {
+                    transform: translateY(0);
+                }
+
+                100% {
+                    transform: translateX(-5px);
+                }
+            }
 
             &:hover {
                 border: 2px solid rgb(@comment-bg-blue);
@@ -376,7 +394,7 @@ label.sentence {
             border: 2px solid rgb(@comment-bg-red);
             color: @comment-text-color;
             bottom: 110%;
-            left: 50%;
+            left: -50%;
 
             &:focus {
                 color: rgb(@comment-bg-red);

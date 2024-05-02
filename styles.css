@@ -74,12 +74,12 @@
   border-radius: 6px;
   border: 1px solid rgba(0, 114, 208, 1);
   background-color: #efefe8;
-  animation: lineAppear-72a6a55b 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: lineAppear-72a6a55b 250ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
   transition: box-shadow 100ms ease;
 }
 @keyframes lineAppear-72a6a55b {
   0% {
-    transform: translateX(1rem);
+    transform: translateX(5px);
   }
   100% {
     transform: translateX(0);
@@ -113,12 +113,14 @@
 }
 .flash-card-div .flash-card-wrapper .row .word-column {
   flex: 4;
+  font-size: 1rem;
 }
 .flash-card-div .flash-card-wrapper .row .symbol-column {
   flex: 1;
 }
 .flash-card-div .flash-card-wrapper .row .meaning-column {
   flex: 4;
+  white-space: pre-wrap;
 }
 .flash-card-div .flash-card-wrapper .row .meaning-column.hide-meaning {
   background-color: red;
@@ -208,7 +210,7 @@ label {
   color: var(--text-normal);
   border-bottom: 1px solid rgba(0, 114, 208, 1);
   background-color: rgba(0, 114, 208, 0.04);
-  transition: background-color 0.2s ease;
+  transition: background-color 0.15s ease;
 }
 label:active {
   background-color: rgba(0, 114, 208, 0.5);
@@ -244,6 +246,15 @@ label input[type="text"] {
   left: 50%;
   transition: color 0.1s ease-in-out, width 0.2s ease-in-out;
   z-index: 3;
+  animation: lineAppear-72a8t55c 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes lineAppear-72a8t55c {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateX(-5px);
+  }
 }
 label input[type="text"]:hover {
   border: 2px solid rgb(0, 114, 208);
@@ -269,7 +280,7 @@ label.sentence > input[type="text"] {
   border: 2px solid rgb(199, 43, 108);
   color: white;
   bottom: 110%;
-  left: 50%;
+  left: -50%;
 }
 label.sentence > input[type="text"]:focus {
   color: rgb(199, 43, 108);

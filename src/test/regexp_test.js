@@ -1,17 +1,15 @@
-const string = `<label>in some form or <label>fashion<input value="n. 方式"></label><input value="以某种形式或方式"></label>`
+/* eslint-disable no-irregular-whitespace */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+const string =
+    `<label class="sentence">2008 offers&nbsp;<a data-tooltip-position="top" aria-label="" rel="noopener" class="external-link" href="" target="_blank">HierarchyId</a>&nbsp;data type that appears to help with the Lineage Column approach and expand the depth that can be represented.<input type="checkbox"><input class="sentence" value="2008 版本提供了 HierarchyId 数据类型，似乎可以帮助处理血统列方法，并扩展了可以表示的深度。" type="text" style="width: 743.7px;"></label>`
 
-// 匹配最外层的<label>...</label>
-const regExpLabel = /<label>(.*?)<\/label>/g
+const word = string
+    .replace(/<sup[\s\S]*?<\/sup>/g, "")    // 去除[^1]
+    .replace(/<[^>]+>/g, '')               // 去除 HTML 标签
+    .replace(/&nbsp;/g, ' ')                // 替换 &nbsp; -> 空格
 
-// 匹配<label>...</label>中的<input>
-const regExpInput = /<input value=["']([^"']+)["']>/g
+// console.log(word)
 
-const labelMatches = string.matchAll(regExpLabel)
-for (const labelMatch of labelMatches) {
-    const labelContent = labelMatch[1]
-    const inputMatches = labelContent.matchAll(regExpInput)
-    for (const inputMatch of inputMatches) {
-        console.log("整个标签:", labelMatch[0])
-        console.log("输入值:", inputMatch[1])
-    }
-}
+console.log(
+    "Avoid N+1 via Common Table Expressions in databases that support them" === "Avoid N+1 via Common Table Expressions in databases that support them"
+)

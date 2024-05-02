@@ -38,12 +38,17 @@ export function parseAllComments(
         }
 
         if (label.classList.contains('sentence')) {
-            word = label.innerHTML?.replace(/<[^>]+>/g, '') ?? ''
+            word = label.innerHTML
+                .replace(/<sup[\s\S]*?<\/sup>/g, "")   // MD footnote syntax
+                .replace(/<[^>]+>/g, '')               // HTML tag, ,must before replace MD footnote syntax
+                .replace(/&nbsp;/g, ' ')               // &nbsp; -> normal space
+
             meaning = (label.findAllSelf('input.sentence')[0] as HTMLInputElement).value
+
         }
 
         if (label.classList.contains('nested')) {
-            word = label.innerHTML?.replace(/<[^>]+>/g, '') ?? ''
+            word = label.innerHTML.replace(/<[^>]+>/g, '')
             meaning = (label.findAllSelf('input.nested')[0] as HTMLInputElement).value
         }
 
@@ -77,9 +82,13 @@ export async function parseActiveViewToComments(
         'gm'
     )
 
-    const regExpSentence = new RegExp(
-        // `<label class="sentence">((?:(?!<label class="sentence">).)*?(?=(<input\\s+value=["'][^"']+["']><\\/label>).)+)<input\\s+value=["']([^"']+)["']><\\/label>`,
-        `<label class="sentence">([\\s\\S]*?)<input value=["']([^"']+)["'] class="sentence">\\s*<\\/label>`,
+    const regExpDoubleQuoteSentence = new RegExp(
+        `<label class="sentence">([\\s\\S]*?)<input value=["]([^"]+)["] class="sentence">\\s*<\\/label>`,
+        'gm'
+    )
+
+    const regExpSingleQuoteSentence = new RegExp(
+        `<label class="sentence">([\\s\\S]*?)<input value=[']([^']+)['] class="sentence">\\s*<\\/label>`,
         'gm'
     )
 
@@ -120,10 +129,16 @@ export async function parseActiveViewToComments(
             }
 
             // <label class="sentence">word<input value="meaning"></label>
-            const sentenceMatches = lineContent.matchAll(regExpSentence)
+            // <label class="sentence">word<input value='meaning'></label>
+            const sentenceMatches = [...lineContent.matchAll(regExpDoubleQuoteSentence), ...lineContent.matchAll(regExpSingleQuoteSentence)]
             for (const match of sentenceMatches) {
                 if (match[1] && match[2]) {
-                    const word = match[1].replace(/<[^>]+>/g, '')
+                    const word = match[1]
+                        .replace(/<[^>]+>/g, '')            // HTML tag
+                        .replace(/\[(.*?)\]\(\)/g, "$1")    // MD links syntax
+                        .replace(/\[\^\d+\]/g, "")          // MD footnote syntax
+                        .replace(/\u00A0/g, ' ')            // Replace "Non-Breaking Space"
+
 
                     const meaning = match[2]
                     matches.push({ word, meaning, line: lineNumber, isSentence: true })

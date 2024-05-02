@@ -164,13 +164,13 @@ export default class ReadAssistPlugin extends Plugin {
 	registerCommands() {
 		this.addCommand({
 			id: "hide-word-list",
-			name: "隐藏/显示单词总览面板",
+			name: "隐藏/显示单词总览列表面板",
 			icon: "list",
 			callback: async () => {
 				const view = this.app.workspace.getActiveViewOfType(MarkdownView)
 				if (view) {
 					const flashCardWrapper =
-						view.contentEl.querySelector(".flash-card-div")
+						view.contentEl.querySelector(".flash-card-wrapper")
 					if (flashCardWrapper) {
 						if (flashCardWrapper.classList.contains("hide"))
 							flashCardWrapper.removeClass("hide")

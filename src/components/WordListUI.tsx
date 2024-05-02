@@ -30,7 +30,9 @@ const Row = ({
 	>
 		<div className={`word-column${isMarked ? ' ra-star' : ''}`}>{word}</div>
 		<div className={`symbol-column`}>-&gt;</div>
-		<div className={`meaning-column`}>{meaning}</div>
+		<div className={`meaning-column`}>
+			{meaning.replace(/((?:\/[^/]*\/|\[[^\]]*\])[^\\/\\[\]]*?)(?=\/|\[|$)/g, '\n$1')}
+		</div>
 	</div>
 );
 
@@ -47,10 +49,13 @@ const onClickHandle = (
 	const state = { scroll: scrollToPosition - 1 };
 	view.setEphemeralState(state);
 
+	// new Notice(wordOfLabel);
+	// new Notice(meaningOfLabel);
+
 	parseAllComments(
 		view.containerEl,
 		(label: HTMLElement, word: string, meaning: string) => {
-			if (wordOfLabel == word && meaningOfLabel == meaning) {
+			if (wordOfLabel === word && meaningOfLabel === meaning) {
 				label.style.backgroundColor = 'aqua';
 
 				setTimeout(() => {
@@ -59,8 +64,41 @@ const onClickHandle = (
 
 				return;
 			}
+			// else if (label.classList.contains('sentence') && wordOfLabel != word) {
+			// 	console.log(wordOfLabel);
+			// 	console.log(word);
+			// }
+			// else if (label.classList.contains('sentence') && meaningOfLabel != meaning) {
+			// 	new Notice(meaningOfLabel);
+			// 	new Notice(meaning);
+			// }
+			else if (
+				label.classList.contains('sentence') &&
+				wordOfLabel.startsWith('Avoid') &&
+				wordOfLabel != word
+			) {
+				console.log(`[wordOfLabel]: ${wordOfLabel}`);
+				console.log(`[word]: ${word}`);
+
+				// const diffWord = getDifference(wordOfLabel, word);
+				// const diffMeaning = getDifference(meaningOfLabel, meaning);
+				// new Notice(`diffWord: ${diffWord}`);
+				// new Notice(diffMeaning);
+			}
 		}
 	);
+};
+
+// 辅助函数：找出两个字符串的不同部分
+const getDifference = (str1: string, str2: string) => {
+	let diff = '';
+	const maxLength = Math.max(str1.length, str2.length);
+	for (let i = 0; i < maxLength; i++) {
+		if (str1[i] !== str2[i]) {
+			diff += str2[i] || str1[i];
+		}
+	}
+	return diff;
 };
 
 export function createTopDiv(container: HTMLElement) {
@@ -108,10 +146,7 @@ const Wrapper = ({
 	children: React.ReactNode;
 }) => (
 	<div
-		// className="flash-card-wrapper"
 		className={`flash-card-wrapper${plugin.settings.is_show_word_list ? '' : ' hide'}`}
-		// onMouseEnter={() => console.log('Mouse entered')}
-		// onMouseLeave={() => console.log('Mouse left')}
 	>
 		{children}
 	</div>
