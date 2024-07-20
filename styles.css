@@ -28,6 +28,18 @@
   background-color: #f0f0f0;
   font-weight: bold;
 }
+.cyu-popup-menu {
+  animation: lineAppear-72a6a55c 250ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+  transition: box-shadow 100ms ease;
+}
+@keyframes lineAppear-72a6a55b {
+  0% {
+    transform: translateX(-10px) translateY(5px);
+  }
+  100% {
+    transform: translateX(0) translateY(5px);
+  }
+}
 .flash-card-div .flash-card-wrapper {
   margin: 0;
   padding: 0;
@@ -61,6 +73,13 @@
   --interactive-normal: aqua;
   background-color: var(--interactive-normal);
 }
+.flash-card-div .flash-card-wrapper .item-count {
+  font-family: Archivo, "手札体-简";
+  margin-bottom: 10px;
+  text-align: left;
+  width: 100%;
+  display: block;
+}
 .flash-card-div .flash-card-wrapper .row {
   font-family: Archivo, "手札体-简";
   font-size: 0.9rem;
@@ -93,7 +112,7 @@
 .flash-card-div .flash-card-wrapper .row.sentence .symbol-column {
   rotate: 90deg;
 }
-.flash-card-div .flash-card-wrapper .row:hover {
+.flash-card-div .flash-card-wrapper .row.row-active {
   box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, 0.042), 0px 5px 20px rgba(0, 0, 0, 0.07);
   animation: lineAppear-72a6a55c 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
@@ -113,7 +132,7 @@
 }
 .flash-card-div .flash-card-wrapper .row .word-column {
   flex: 4;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .flash-card-div .flash-card-wrapper .row .symbol-column {
   flex: 1;
@@ -169,7 +188,9 @@
   user-select: none;
   white-space: nowrap;
   margin-bottom: 10px;
-  float: right;
+  position: absolute;
+  right: 440px;
+  top: 90px;
   --font-ui-small: 0.9rem;
   background-color: var(--background-secondary);
   margin-top: 1rem;
@@ -202,7 +223,6 @@ label {
   padding: 1px;
   border: none;
   cursor: pointer;
-  user-select: none;
   position: relative;
   font-weight: normal;
   white-space: normal;
@@ -275,14 +295,14 @@ label.sentence {
 label.sentence:active:not(:has(label:active)) {
   background-color: rgba(199, 43, 108, 0.5);
 }
-label.sentence > input[type="text"] {
+label.sentence > input[type="text"].sentence {
   background-color: rgba(199, 43, 108, 1);
   border: 2px solid rgb(199, 43, 108);
   color: white;
   bottom: 110%;
   left: -50%;
 }
-label.sentence > input[type="text"]:focus {
+label.sentence > input[type="text"].sentence:focus {
   color: rgb(199, 43, 108);
   background-color: var(--bg1);
   border: 2px solid rgb(199, 43, 108);

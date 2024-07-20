@@ -3,6 +3,7 @@ import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import { getWordCount } from '../func/WordCount';
+import { useState } from 'react';
 
 interface wordCounterProps {
 	className?: string;
@@ -14,7 +15,22 @@ const WordCounter: React.FC<wordCounterProps> = ({
 	className = 'ra-count-display',
 	textContent = ' ... words',
 }) => {
-	return <span className={className}>{textContent}</span>;
+	const [content, setContent] = useState<string>(textContent); // 使用 textContent 作为初始内容
+
+	const handleClick = async () => {
+		const newWordCount = await getWordCountOfArticle();
+		setContent(newWordCount + ' words');
+	};
+
+	return (
+		<span
+			className={className}
+			onClick={handleClick}
+			aria-label="Total word count of this article, click to refresh"
+		>
+			{content}
+		</span>
+	);
 };
 
 export async function mountWordCounter(containerEl: HTMLElement) {
@@ -29,11 +45,7 @@ export async function mountWordCounter(containerEl: HTMLElement) {
 
 	root.render(
 		<React.StrictMode>
-			<WordCounter
-				className="ra-count-display"
-				textContent={wordCount + ' words'}
-				title="this a msg."
-			/>
+			<WordCounter className="ra-count-display" textContent={wordCount + ' words'} />
 		</React.StrictMode>
 	);
 }

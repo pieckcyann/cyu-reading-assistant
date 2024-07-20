@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import ReadAssistPlugin, { RowData } from 'main';
+import ReadAssistPlugin, { FieldData } from 'main';
 import { MarkdownView, Notice } from 'obsidian';
 import { ReadAssistPluginSettings } from 'settings/Settings';
 
 import React, { useRef, useEffect, useState } from 'react';
 import { WordComparator } from 'func/WordMarkCheck';
-import { parseAllComments } from 'func/ParseComment';
+import { parseFieldsFromPreview } from 'func/ParseComment';
 
+import { PopupMenu, SearchableMenuItem } from './menus'; // 替换为实际路径
 const Row = ({
 	plugin,
 	word,
@@ -21,20 +22,83 @@ const Row = ({
 	line: number;
 	isSentence: boolean;
 	isMarked: boolean;
-}) => (
-	<div
-		className={`row${isSentence ? ' sentence' : ''}`}
-		onClick={() => {
-			onClickHandle(plugin, line, word, meaning);
-		}}
-	>
-		<div className={`word-column${isMarked ? ' ra-star' : ''}`}>{word}</div>
-		<div className={`symbol-column`}>-&gt;</div>
-		<div className={`meaning-column`}>
-			{meaning.replace(/((?:\/[^/]*\/|\[[^\]]*\])[^\\/\\[\]]*?)(?=\/|\[|$)/g, '\n$1')}
+}) => {
+	const rowRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const handleContextMenu = (event: MouseEvent) => {
+			event.preventDefault(); // 阻止默认右键菜单
+
+			// 获取 Row 元素
+			const rowElement = rowRef.current;
+			if (rowElement) {
+				rowElement.classList.add('row-active');
+
+				// 创建 PopupMenu 实例
+				const menu = new PopupMenu(plugin.app);
+
+				// 添加菜单项
+				menu.addItem((item) => {
+					item.setTitle('Edit');
+					item.handleEvent = (event: Event) => {
+						new Notice('Edit clicked');
+					};
+				});
+
+				menu.addItem((item) => {
+					item.setTitle('Delete');
+					item.handleEvent = (event: Event) => {
+						new Notice('Delete clicked');
+					};
+				});
+
+				menu.addItem((item) => {
+					item.setTitle('More Info');
+					item.handleEvent = (event: Event) => {
+						new Notice('More Info clicked');
+					};
+				});
+
+				// 显示菜单
+				const rect = rowRef.current?.getBoundingClientRect();
+				if (rect) {
+					menu.showAtPosition({ x: rect.left, y: rect.bottom });
+				}
+				// 移除类名以确保菜单隐藏后不会一直存在
+				const removeClass = () => {
+					rowElement.classList.remove('row-active');
+					document.removeEventListener('click', removeClass); // 确保只移除一次
+				};
+				document.addEventListener('click', removeClass);
+			}
+		};
+
+		const rowElement = rowRef.current;
+		if (rowElement) {
+			rowElement.addEventListener('contextmenu', handleContextMenu);
+		}
+
+		return () => {
+			if (rowElement) {
+				rowElement.removeEventListener('contextmenu', handleContextMenu);
+			}
+		};
+	}, [plugin, word, meaning, line, isSentence, isMarked]);
+
+	return (
+		<div
+			className={`row${isSentence ? ' sentence' : ''}`}
+			ref={rowRef}
+			onClick={() => {
+				onClickHandle(plugin, line, word, meaning);
+			}}
+		>
+			<div className={`word-column${isMarked ? ' ra-star' : ''}`}>{word}</div>
+			<div className={`symbol-column`}>-&gt;</div>
+			<div className={`meaning-column`}>{meaning}</div>
 		</div>
-	</div>
-);
+	);
+};
 
 const onClickHandle = (
 	plugin: ReadAssistPlugin,
@@ -49,13 +113,15 @@ const onClickHandle = (
 	const state = { scroll: scrollToPosition - 1 };
 	view.setEphemeralState(state);
 
-	// new Notice(wordOfLabel);
-	// new Notice(meaningOfLabel);
-
-	parseAllComments(
+	parseFieldsFromPreview(
 		view.containerEl,
 		(label: HTMLElement, word: string, meaning: string) => {
 			if (wordOfLabel === word && meaningOfLabel === meaning) {
+				// new Notice(`预览单词：${word}`);
+				// new Notice(`预览释义：${meaning}`);
+				// new Notice(`源码单词：${wordOfLabel}`);
+				// new Notice(`源码释义：${meaningOfLabel}`);
+
 				label.style.backgroundColor = 'aqua';
 
 				setTimeout(() => {
@@ -64,41 +130,8 @@ const onClickHandle = (
 
 				return;
 			}
-			// else if (label.classList.contains('sentence') && wordOfLabel != word) {
-			// 	console.log(wordOfLabel);
-			// 	console.log(word);
-			// }
-			// else if (label.classList.contains('sentence') && meaningOfLabel != meaning) {
-			// 	new Notice(meaningOfLabel);
-			// 	new Notice(meaning);
-			// }
-			else if (
-				label.classList.contains('sentence') &&
-				wordOfLabel.startsWith('Avoid') &&
-				wordOfLabel != word
-			) {
-				console.log(`[wordOfLabel]: ${wordOfLabel}`);
-				console.log(`[word]: ${word}`);
-
-				// const diffWord = getDifference(wordOfLabel, word);
-				// const diffMeaning = getDifference(meaningOfLabel, meaning);
-				// new Notice(`diffWord: ${diffWord}`);
-				// new Notice(diffMeaning);
-			}
 		}
 	);
-};
-
-// 辅助函数：找出两个字符串的不同部分
-const getDifference = (str1: string, str2: string) => {
-	let diff = '';
-	const maxLength = Math.max(str1.length, str2.length);
-	for (let i = 0; i < maxLength; i++) {
-		if (str1[i] !== str2[i]) {
-			diff += str2[i] || str1[i];
-		}
-	}
-	return diff;
 };
 
 export function createTopDiv(container: HTMLElement) {
@@ -138,16 +171,28 @@ export const setScrollTopWrapper = (Plugin: ReadAssistPlugin, newValue: number) 
 	}
 };
 
+const ItemCount = ({ count }: { count: number }) => (
+	<div className="item-count">Total fields: {count}</div>
+);
+
 const Wrapper = ({
 	plugin,
 	children,
+	count,
 }: {
 	plugin: ReadAssistPlugin;
 	children: React.ReactNode;
+	count: number;
 }) => (
 	<div
-		className={`flash-card-wrapper${plugin.settings.is_show_word_list ? '' : ' hide'}`}
+		className={`flash-card-wrapper${
+			plugin.settings.is_show_word_list_settings ||
+			plugin.settings.is_show_word_list_command
+				? ''
+				: ' hide'
+		}`}
 	>
+		<ItemCount count={count} />
 		{children}
 	</div>
 );
@@ -155,7 +200,7 @@ const Wrapper = ({
 export function createWrapper(
 	Plugin: ReadAssistPlugin,
 	leaf: MarkdownView,
-	datasMap: RowData[]
+	datasMap: FieldData[]
 ) {
 	const wrapper = leaf.containerEl.find('.flash-card-wrapper');
 	if (wrapper == null) return null;
@@ -177,7 +222,11 @@ export function createWrapper(
 		);
 	}
 
-	return <Wrapper plugin={Plugin}>{listItems}</Wrapper>;
+	return (
+		<Wrapper plugin={Plugin} count={listItems.length}>
+			{listItems}
+		</Wrapper>
+	);
 }
 
 export function removeRow(container: HTMLElement) {

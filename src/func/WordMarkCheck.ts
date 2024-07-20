@@ -25,13 +25,13 @@ export async function extractWordComparedDatas(app: App, pathToWordSets: string)
 export function WordComparator(wordComparedDataArray: WordComparedData[], comparedWord: string): boolean {
 
     const firstLetter = comparedWord.charAt(0).toLowerCase()
+    // Find the word set corresponding to the first letter based on firstLetter
     const dataItem = wordComparedDataArray.find(item => item.fileName === firstLetter)
-    if (dataItem) {
-        // 找到对应的 fileName，检查 fileContent 是否包含 comparedWord
-        return dataItem.fileContent.includes(comparedWord)
+    const dataArray = dataItem?.fileContent.split("\r\n") ?? ""
+    for (const word of dataArray) {
+        if (word === comparedWord) {
+            return true
+        }
     }
-
-    // 如果没有找到对应的 fileName，则返回 false
     return false
-
 }

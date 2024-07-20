@@ -1,20 +1,13 @@
-import { App, MarkdownRenderChild, MarkdownView, Notice, TFile } from 'obsidian'
-import { ReadAssistPluginSettings } from 'settings/Settings'
-import { WordComparator } from 'func/WordMarkCheck'
-import { iterateLabels } from './func/ParseComment'
-import {
-	mountWordCounter,
-	unmountWordCounter
-} from './components/WordCounter'
+import { App, MarkdownRenderChild, MarkdownView, Notice, TFile } from 'obsidian';
+import { ReadAssistPluginSettings } from 'settings/Settings';
+import { WordComparator } from 'func/WordMarkCheck';
+import { iterateLabelsAndInputs } from './func/ParseComment';
+import { mountWordCounter, unmountWordCounter } from './components/WordCounter';
 
-import {
-	adjustInputWidth,
-	getInputTextWidth
-} from './func/InputAdjuest'
-
+import { adjustInputWidth, getInputTextWidth } from './func/InputAdjuest';
+import { ExportManager } from 'func/ExportWordsToAnki';
 
 export default class ReadAssistance extends MarkdownRenderChild {
-
 	constructor(
 		private app: App,
 		public activeFile: TFile,
@@ -23,26 +16,28 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		public pathToWordSets: string,
 		public settings: ReadAssistPluginSettings
 	) {
-		super(renderedDiv)
+		super(renderedDiv);
 	}
 
 	async onload() {
-		this.setForLabels()
-		this.setForInputs()
-		this.registerEvents()
+		this.setForLabels();
+		this.setForInputs();
+		this.registerEvents();
 
-		this.checkCounter()
+		this.checkCounter();
 	}
 
 	unload() {
-		this.removeInputListeners()
-		unmountWordCounter(this.containerEl)
+		this.removeInputListeners();
+		unmountWordCounter(this.containerEl);
 	}
 
 	checkCounter = () => {
-		const wordCounter = this.containerEl.querySelector(".ra-count-display") as HTMLElement
-		if (!wordCounter) mountWordCounter(this.containerEl)
-	}
+		const wordCounter = this.containerEl.querySelector(
+			'.ra-count-display'
+		) as HTMLElement;
+		if (!wordCounter) mountWordCounter(this.containerEl);
+	};
 
 	registerEvents() {
 		// this.registerEvent(this.app.workspace.on("file-open", this.onFileChangeHandler))
@@ -57,178 +52,203 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		this.checkWrapNode()
 		this.checkRowNode()
 		*/
-	}
+	};
 
 	onFileChangeHandler = () => {
-		this.onEditorChangeHandler()
-	}
+		this.onEditorChangeHandler();
+	};
 
 	onActiveLeafChangeHandler = () => {
-		this.onEditorChangeHandler()
-	}
+		this.onEditorChangeHandler();
+	};
 
 	setForLabels() {
-		iterateLabels(
+		iterateLabelsAndInputs(
 			this.containerEl,
 			async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
 				if (inputs.length > 0) {
-					const checkboxInput = document.createElement('input')
-					checkboxInput.type = 'checkbox'
-					label.insertBefore(checkboxInput, inputs[0])
-					inputs[0].type = 'text'
+					const checkboxInput = document.createElement('input');
+					checkboxInput.type = 'checkbox';
+					label.insertBefore(checkboxInput, inputs[0]);
+					inputs[0].type = 'text';
 
-					let textInput
-					if (label.classList.contains('sentence') || label.classList.contains('nested')) {
-						textInput = inputs[inputs.length - 1]
+					let textInput: HTMLInputElement;
+					if (
+						label.classList.contains('sentence') ||
+						label.classList.contains('nested')
+					) {
+						textInput = inputs[inputs.length - 1];
 					} else {
-						textInput = inputs[1]
+						textInput = inputs[1];
 					}
 
 					// 修复嵌套label的点击事件混乱
 					label.addEventListener('click', (event) => {
-						event.preventDefault()
-						event.stopPropagation()
+						event.preventDefault();
+						event.stopPropagation();
 						if (checkboxInput) {
-							checkboxInput.checked = !checkboxInput.checked
+							checkboxInput.checked = !checkboxInput.checked;
 						}
-						adjustInputWidth(textInput)
-					})
+						adjustInputWidth(textInput);
+					});
 
 					// 右键点击复制
 					label.addEventListener('contextmenu', (event) => {
-						event.preventDefault()
-						event.stopPropagation()
-						const copyText = label.textContent ?? ''
-						navigator.clipboard.writeText(copyText)
-					})
+						event.preventDefault();
+						event.stopPropagation();
+						const copyText = label.textContent ?? '';
+						navigator.clipboard.writeText(copyText);
+					});
 
 					// 添加星标span
 					if (this.settings.is_mark_star == true) {
-						const isMarked = WordComparator(this.settings.word_sets_data, label.textContent ?? '')
+						const isMarked = WordComparator(
+							this.settings.word_sets_data,
+							label.textContent ?? ''
+						);
 						if (isMarked) {
-							const starSpan = document.createElement('span')
-							starSpan.addClass('ra-star')
-							label.appendChild(starSpan)
+							const starSpan = document.createElement('span');
+							starSpan.addClass('ra-star');
+							label.appendChild(starSpan);
 						}
 					}
 				}
-			})
+			}
+		);
 	}
 
 	async setForInputs(): Promise<void> {
-		iterateLabels(
+		iterateLabelsAndInputs(
 			this.containerEl,
 			async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
-				const textInput = inputs[1]
+				const textInput = inputs[1];
 
 				textInput.addEventListener('input', () => {
-					adjustInputWidth(textInput)
-				})
-				textInput.removeEventListener('keyup', this.onInputKeyUp)
-				textInput.addEventListener('keyup', this.onInputKeyUp)
-				textInput.addEventListener('click', this.onInputClick)
+					adjustInputWidth(textInput);
+				});
+				textInput.removeEventListener('keyup', this.onInputKeyUp);
+				textInput.addEventListener('keyup', this.onInputKeyUp);
+				textInput.addEventListener('click', this.onInputClick);
 				// 防止点击input触发label的active伪类
 				textInput.addEventListener('mousedown', () => {
 					label.classList.contains('sentence')
 						? (label.style.backgroundColor = 'rgba(1199, 43, 108, 0.06)')
-						: (label.style.backgroundColor = '#ecefe8')
-				})
+						: (label.style.backgroundColor = '#ecefe8');
+				});
 				textInput.addEventListener('mouseup', () => {
-					label.removeAttribute('style')
-				})
+					label.removeAttribute('style');
+				});
 				textInput.addEventListener('focus', () => {
-					textInput.style.width = getInputTextWidth(textInput) + 16 * 1.5 + 'px'
-				})
+					textInput.style.width = getInputTextWidth(textInput) + 16 * 1.5 + 'px';
+				});
 				textInput.addEventListener('blur', () => {
-					adjustInputWidth(textInput)
-				})
-			})
+					adjustInputWidth(textInput);
+				});
+			}
+		);
 	}
 
 	private onInputClick = async (event: MouseEvent) => {
-		event.preventDefault()
-		event.stopPropagation()
-	}
+		event.preventDefault();
+		event.stopPropagation();
+	};
 
 	private onInputKeyUp = async (event: KeyboardEvent) => {
-		const textInput = event.target as HTMLInputElement
-		const label = textInput.parentElement ?? null
+		const textInput = event.target as HTMLInputElement;
+		const label = textInput.parentElement ?? null;
 		/* eslint-disable prefer-const */
-		let labelText = { value: (label?.textContent ?? '').trim() }
-		const oldValue = textInput.defaultValue
-		const newValue = textInput.value
+		let labelText = { value: (label?.textContent ?? '').trim() };
+		const oldValue = textInput.defaultValue;
+		const newValue = textInput.value;
 
 		if (label && event.key === 'Enter' && newValue.trim() !== oldValue.trim()) {
-			event.preventDefault()
-			event.stopPropagation()
+			event.preventDefault();
+			event.stopPropagation();
 
-			checkChildrenLabelTag(label, labelText)
-			checkChildrenDelTag(label, labelText)
+			new Notice('xxxxxxxxxxxxx');
+
+			checkChildrenLabelTag(label, labelText);
+			checkChildrenDelTag(label, labelText);
 
 			await this.updateInputValueInFile(
 				labelText.value,
-				oldValue, newValue,
+				oldValue,
+				newValue,
 				label.classList.contains('sentence'),
 				label.classList.contains('nested'),
-			)
+				label.hasAttribute('data-anki-id')
+			);
+
+			// if (!label.hasAttribute('data-anki-id')) {
+			// 	const em = new ExportManager(this.app);
+			// 	em.exportSingleWordsToAnki({
+			// 		word: labelText.value,
+			// 		meaning: newValue,
+			// 		isSentence: label.classList.contains('sentence'),
+			// 		ankiID: Number(label.getAttribute('data-anki-id')),
+			// 	});
+			// }
 		}
 
 		function checkChildrenDelTag(label: HTMLElement, labelTextObj: { value: string }) {
-			const del = label.querySelector('del')
+			const del = label.querySelector('del');
 			if (del) {
-				const delText = del.innerText
-				const delAttr = del.getAttribute('data-prototype')
+				const delText = del.innerText;
+				const delAttr = del.getAttribute('data-prototype');
 				labelTextObj.value = labelTextObj.value.replace(
 					delText,
 					`<del data-prototype="${delAttr}">${delText}</del>`
-				)
+				);
 			}
 		}
 
 		function checkChildrenLabelTag(label: HTMLElement, labelTextObj: { value: string }) {
-			const childrenLabels = label.querySelectorAll('label')
+			const childrenLabels = label.querySelectorAll('label');
 			if (childrenLabels.length > 0) {
 				childrenLabels.forEach((childrenLabel) => {
 					let childrenLabelText = {
 						value: (childrenLabel?.textContent ?? '').trim(),
-					}
-					const childrenInputText = (childrenLabel.querySelector('input[type="text"]') as HTMLInputElement)?.value || ''
-					let quoteType
-					newValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`)
+					};
+					const childrenInputText =
+						(childrenLabel.querySelector('input[type="text"]') as HTMLInputElement)
+							?.value || '';
+					let quoteType;
+					newValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`);
 					labelTextObj.value = labelTextObj.value.replace(
 						childrenLabelText.value,
 						`<label>${childrenLabelText.value}<input value=${quoteType}${childrenInputText}${quoteType}></label>`
-					)
-					checkChildrenDelTag(childrenLabel, childrenLabelText)
-				})
+					);
+					checkChildrenDelTag(childrenLabel, childrenLabelText);
+				});
 			}
 		}
-	}
+	};
 
 	async removeInputListeners(): Promise<void> {
-		iterateLabels(
+		iterateLabelsAndInputs(
 			this.containerEl,
 			async (label: HTMLLabelElement, inputs: HTMLInputElement[]) => {
-				const textInput = inputs[1]
+				const textInput = inputs[1];
 
-				textInput.removeEventListener('input', () => adjustInputWidth(textInput))
-				textInput.removeEventListener('keyup', this.onInputKeyUp)
-				textInput.removeEventListener('click', this.onInputClick)
+				textInput.removeEventListener('input', () => adjustInputWidth(textInput));
+				textInput.removeEventListener('keyup', this.onInputKeyUp);
+				textInput.removeEventListener('click', this.onInputClick);
 				textInput.removeEventListener('mousedown', () => {
 					label.classList.contains('sentence')
 						? (label.style.backgroundColor = 'rgba(199, 43, 108, 0.08)')
-						: (label.style.backgroundColor = '#ecefe8')
-				})
+						: (label.style.backgroundColor = '#ecefe8');
+				});
 				textInput.removeEventListener('mouseup', () => {
-					label.removeAttribute('style')
-				})
+					label.removeAttribute('style');
+				});
 				textInput.removeEventListener('focus', () => {
-					textInput.style.width = getInputTextWidth(textInput) + 16 * 1.5 + 'px'
-				})
+					textInput.style.width = getInputTextWidth(textInput) + 16 * 1.5 + 'px';
+				});
 				textInput.removeEventListener('blur', () => {
-					adjustInputWidth(textInput)
-				})
-			})
+					adjustInputWidth(textInput);
+				});
+			}
+		);
 	}
 
 	// 替换源码模式下文本
@@ -237,31 +257,25 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		oldValue: string,
 		newValue: string,
 		isSentence: boolean,
-		isNested: boolean
+		isNested: boolean,
+		isHasAnkidID: boolean
 	): Promise<void> {
-		const file = this.activeFile
-		if (!file) return
-		const fileContent = await this.app.vault.read(file)
+		const file = this.activeFile;
+		if (!file) return;
+		const fileContent = await this.app.vault.read(file);
 
-		let labelClass
-		if (isSentence) {
-			labelClass = ' class="sentence"'
-		} else if (isNested) {
-			labelClass = ' class="nested"'
-		} else {
-			labelClass = ''
-		}
+		const labelClass = generateLabelRegex(isSentence, isNested, isHasAnkidID);
 
-		let regex = getRegexForLabel(labelText, oldValue, labelClass)
-		const linkRegex = /\[([^\]]+)\]\(\)/g
+		let regex = getRegexForLabel(labelText, oldValue, labelClass);
+		const linkRegex = /\[([^\]]+)\]\(\)/g;
 		// const footnoteRegex = /\[\^(\d+)\]/g
 
 		if ((fileContent.match(regex) || []).length < 1) {
-			let linkMatch
+			let linkMatch;
 			while ((linkMatch = linkRegex.exec(fileContent)) !== null) {
-				const linkText = linkMatch[1]
+				const linkText = linkMatch[1];
 				if (labelText.includes(linkText)) {
-					labelText = labelText.replace(linkText, `[${linkText}]()`)
+					labelText = labelText.replace(linkText, `[${linkText}]()`);
 				}
 			}
 
@@ -275,45 +289,91 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			//     }
 			// }
 
-			regex = getRegexForLabel(labelText, oldValue, labelClass)
+			regex = getRegexForLabel(labelText, oldValue, labelClass);
 		}
 
-		let quoteType
-		newValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`)
+		// const regAnkiId = `(?:\\s+data-anki-id=["'](\\d+)["'])?`;
+		// ${regAnkiId}
+
+		// const newFileContent = fileContent.replace(
+		// 	regex,
+		// 	`<label${regAnkiId}${labelClass}>${labelText}<input value=${quoteType}${newValue}${quoteType}${labelClass}></label>`
+		// );
+		const oldLabelText = fileContent.match(regex);
+		if (!oldLabelText) return;
 
 		const newFileContent = fileContent.replace(
-			regex,
-			`<label${labelClass}>${labelText}<input value=${quoteType}${newValue}${quoteType}${labelClass}></label>`
-		)
-		await this.app.vault.modify(file, newFileContent)
-		showNoticeForMatchCount(fileContent, regex)
+			oldLabelText[0],
+			oldLabelText[0].replace(oldValue, newValue)
+		);
+		await this.app.vault.modify(file, newFileContent);
+		showNoticeForMatchCount(fileContent, regex);
 
-		function getRegexForLabel(labelText: string, oldValue: string, labelClass: string): RegExp {
-			const escapedLabelText = escapeRegExp(labelText)
-			const escapedOldValue = escapeRegExp(oldValue)
-			const escapedlabelClass = escapeRegExp(labelClass)
+		function getRegexForLabel(
+			labelText: string,
+			oldValue: string,
+			labelClass: RegExp
+		): RegExp {
+			const escapedLabelText = escapeRegExp(labelText);
+			const escapedOldValue = escapeRegExp(oldValue);
+			// const escapedlabelClass = escapeRegExp(labelClass);
+			const escapedlabelClass = labelClass;
 
-			let quoteType
-			oldValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`)
-			const regexPattern = `<label${escapedlabelClass}>${escapedLabelText}<input value=${quoteType}${escapedOldValue}${quoteType}${labelClass}></label>`
+			let quoteType;
+			oldValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`);
 
-			return new RegExp(regexPattern, 'g')
+			return new RegExp(
+				`(<label${escapedlabelClass}>)${escapedLabelText}(<input value=${quoteType}${escapedOldValue}${quoteType}${labelClass}></label>)`,
+				'gm'
+			);
+		}
+
+		function generateLabelRegex(
+			isSentence: boolean,
+			isNested: boolean,
+			isHasAnkidID: boolean
+		) {
+			let classPart = '';
+			if (isSentence) {
+				classPart = 'class="sentence"';
+			} else if (isNested) {
+				classPart = 'class="nested"';
+			}
+
+			let ankiIdPart = '';
+			if (isHasAnkidID) {
+				ankiIdPart = 'anki-id="\\d+"';
+			}
+
+			let regexString = '<label';
+
+			if (classPart && ankiIdPart) {
+				// Both attributes
+				regexString += ` ${ankiIdPart} ${classPart}`;
+			} else if (classPart || ankiIdPart) {
+				// One attribute
+				regexString += ` ${classPart}${ankiIdPart}`;
+			}
+
+			regexString += '>';
+
+			return new RegExp(regexString);
 		}
 
 		function showNoticeForMatchCount(fileContent: string, regex: RegExp): void {
-			const matchCount = (fileContent.match(regex) || []).length
+			const matchCount = (fileContent.match(regex) || []).length;
 			if (matchCount === 1) {
-				new Notice(`提示：笔记内容已修改`)
+				new Notice(`提示：笔记内容已修改`);
 			} else if (matchCount > 1) {
-				new Notice(`提示：重复了 ${matchCount} 处`)
-			} else if (matchCount < 1) {
-				new Notice(`警告：未找到对应的label标签文本`)
+				new Notice(`提示：重复了 ${matchCount} 处`);
+			} else if (matchCount < 1 || !fileContent.match(regex)) {
+				new Notice(`警告：未找到对应的label标签文本`);
 			}
 		}
 
 		// 替换：加反斜杠变为特殊字符
 		function escapeRegExp(str: string): string {
-			return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+			return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 		}
 	}
 
@@ -323,5 +383,5 @@ export default class ReadAssistance extends MarkdownRenderChild {
 
 	positionComment = () => {
 		// TODO: 优化提示框textinput位置
-	}
+	};
 }
