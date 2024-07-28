@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import ReadAssistPlugin, { FieldData } from 'main';
+import ReadAssistPlugin from 'main';
+import { FieldData } from 'interfaces/field-interface';
 import { MarkdownView, Notice } from 'obsidian';
 import { ReadAssistPluginSettings } from 'settings/Settings';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { WordComparator } from 'func/WordMarkCheck';
 import { parseFieldsFromPreview } from 'func/ParseComment';
 
 import { PopupMenu, SearchableMenuItem } from './menus'; // 替换为实际路径
@@ -115,17 +115,17 @@ const onClickHandle = (
 
 	parseFieldsFromPreview(
 		view.containerEl,
-		(label: HTMLElement, word: string, meaning: string) => {
-			if (wordOfLabel === word && meaningOfLabel === meaning) {
+		(previewLabel: HTMLElement, previewWord: string, previewMeaning: string) => {
+			if (wordOfLabel === previewWord && meaningOfLabel === previewMeaning) {
 				// new Notice(`预览单词：${word}`);
 				// new Notice(`预览释义：${meaning}`);
 				// new Notice(`源码单词：${wordOfLabel}`);
 				// new Notice(`源码释义：${meaningOfLabel}`);
 
-				label.style.backgroundColor = 'aqua';
+				previewLabel.style.backgroundColor = 'aqua';
 
 				setTimeout(() => {
-					label.style.backgroundColor = '';
+					previewLabel.style.backgroundColor = '';
 				}, 1000);
 
 				return;
@@ -137,7 +137,8 @@ const onClickHandle = (
 export function createTopDiv(container: HTMLElement) {
 	const flashCardDiv = createEl('div');
 	flashCardDiv.addClass('flash-card-div');
-	flashCardDiv.addClass('floating-right');
+	// flashCardDiv.addClass('floating-right');
+	flashCardDiv.addClass('floating-left');
 
 	const flashCardWrapper = createEl('div');
 	flashCardWrapper.addClass('flash-card-wrapper');
@@ -207,8 +208,6 @@ export function createWrapper(
 
 	const listItems: React.ReactNode[] = [];
 	for (const data of datasMap) {
-		const isMarked = WordComparator(Plugin.settings.word_sets_data, data.word);
-
 		listItems.push(
 			<Row
 				plugin={Plugin}
@@ -217,7 +216,7 @@ export function createWrapper(
 				meaning={data.meaning}
 				line={data.line}
 				isSentence={data.isSentence}
-				isMarked={isMarked}
+				isMarked={data.isMarked}
 			/>
 		);
 	}

@@ -1,6 +1,9 @@
-import { FieldData } from 'main';
+import { FieldData } from 'interfaces/field-interface';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Notice } from 'obsidian';
+import { App, MarkdownView, Notice } from 'obsidian';
+import { WordComparator } from './WordMarkCheck';
+import { ReadAssistPluginSettings } from 'settings/Settings';
+import { SourceTextToFieldWord, innerHTMLToTextContent } from 'utils/StringReplace';
 
 export function iterateLabelsAndInputs(
 	containerEl: HTMLElement,
@@ -28,44 +31,38 @@ export function parseFieldsFromPreview(
 	callback: (label: HTMLElement, word: string, meaning: string) => void
 ) {
 	const labels = containerEl.findAll('label') as HTMLLabelElement[];
-	for (const label of labels) {
-		const directInputs = Array.from(label.children).filter(
+	for (const previewLabel of labels) {
+		const directInputs = Array.from(previewLabel.children).filter(
 			(child) => child.tagName === 'INPUT'
 		) as HTMLInputElement[];
 		const grandchildrenInputs = Array.from(
-			label.querySelectorAll('label > input')
+			previewLabel.querySelectorAll('label > input')
 		) as HTMLInputElement[];
 		const inputs = [...directInputs, ...grandchildrenInputs];
 
-		let word = label.innerText;
-		let meaning = inputs[1].value;
+		let previewWord = previewLabel.innerText;
+		let previewMeaning = inputs[1].value;
 
-		const del = label.querySelector('del');
+		const del = previewLabel.querySelector('del');
 		if (del) {
-			word = del.getAttribute('data-prototype') || word;
+			previewWord = del.getAttribute('data-prototype') || previewWord;
 		}
 
-		if (label.classList.contains('sentence')) {
-			word = label.innerHTML
-				.replace(/<sup[\s\S]*?<\/sup>/g, '') // MD footnote syntax
-				.replace(
-					`
-                    /<code class="code-styler-inline>([\\s\\S]*?)</code>"/g`,
-					'$1'
-				) // MD inline-code syntax
-				.replace(/<[^>]+>/g, '') // HTML tag, must before replace MD footnote syntax
-				.replace(/&nbsp;/g, ' '); // &nbsp; -> normal space
+		if (previewLabel.classList.contains('sentence')) {
+			previewWord = innerHTMLToTextContent(previewLabel.innerHTML);
 
-			meaning = (label.findAllSelf('input.sentence')[0] as HTMLInputElement).value;
+			previewMeaning = (previewLabel.findAllSelf('input.sentence')[0] as HTMLInputElement)
+				.value;
 		}
 
-		if (label.classList.contains('nested')) {
-			word = label.textContent ?? '';
+		if (previewLabel.classList.contains('nested')) {
+			previewWord = previewLabel.textContent ?? '';
 
-			meaning = (label.findAllSelf('input.nested')[0] as HTMLInputElement).value;
+			previewMeaning = (previewLabel.findAllSelf('input.nested')[0] as HTMLInputElement)
+				.value;
 		}
 
-		callback(label, word, meaning);
+		callback(previewLabel, previewWord, previewMeaning);
 	}
 }
 
@@ -75,10 +72,16 @@ export function parseFieldsFromPreview(
  * @param callback 对每一个匹配项()
  */
 export async function parseFieldsFromSource(
-	text: string,
+	app: App,
+	settings: ReadAssistPluginSettings,
 	callback: (wordDataArray: FieldData[]) => void
 ) {
-	const lines = text.split('\n');
+	const activeLeafView = app.workspace.getActiveViewOfType(MarkdownView);
+	if (activeLeafView == null) return;
+
+	const activeFileText = activeLeafView.currentMode.get();
+
+	const lines = activeFileText.split('\n');
 	const wordDataArray: FieldData[] = [];
 
 	// const regExpText = `[\\s\\S]*?`
@@ -143,11 +146,14 @@ export async function parseFieldsFromSource(
 				const ankiID = Number(match[1]);
 				const word = match[2];
 				const meaning = replaceHtmlEntities(match[3]);
+				const isMarked = WordComparator(settings.word_sets_data, word ?? '');
+
 				matches.push({
 					word,
 					meaning,
 					line: lineNumber,
 					isSentence: false,
+					isMarked: isMarked,
 					isExistAnki: isExistAnki,
 					ankiID: ankiID,
 				});
@@ -160,19 +166,17 @@ export async function parseFieldsFromSource(
 			if (match[2] && match[3]) {
 				const isExistAnki = !!match[1];
 				const ankiID = Number(match[1]);
-				const word = match[2]
-					.replace(/<[^>]+>/g, '') // HTML tag
-					.replace(/\[(.*?)\]\(\)/g, '$1') // MD links syntax
-					.replace(/\[\^\d+\]/g, '') // MD footnote syntax
-					.replace(/\u00A0/g, ' ') // Replace "Non-Breaking Space"
-					.replace(/`/g, ''); // Replace inline-code
+				const word = SourceTextToFieldWord(match[2]);
 
 				const meaning = replaceHtmlEntities(match[3]);
+				const isMarked = WordComparator(settings.word_sets_data, word ?? '');
+
 				matches.push({
 					word,
 					meaning,
 					line: lineNumber,
 					isSentence: false,
+					isMarked: isMarked,
 					isExistAnki: isExistAnki,
 					ankiID: ankiID,
 				});
@@ -187,11 +191,14 @@ export async function parseFieldsFromSource(
 				const ankiID = Number(match[1]);
 				const word = match[2];
 				const meaning = replaceHtmlEntities(match[3]);
+				const isMarked = WordComparator(settings.word_sets_data, word ?? '');
+
 				matches.push({
 					word,
 					meaning,
 					line: lineNumber,
 					isSentence: false,
+					isMarked: isMarked,
 					isExistAnki: isExistAnki,
 					ankiID: ankiID,
 				});
@@ -208,19 +215,17 @@ export async function parseFieldsFromSource(
 			if (match[2] && match[3]) {
 				const isExistAnki = !!match[1];
 				const ankiID = Number(match[1]);
-				const word = match[2]
-					.replace(/<[^>]+>/g, '') // HTML tag
-					.replace(/\[(.*?)\]\(\)/g, '$1') // MD links syntax
-					.replace(/\[\^\d+\]/g, '') // MD footnote syntax
-					.replace(/\u00A0/g, ' ') // Replace "Non-Breaking Space"
-					.replace(/`/g, ''); // Replace inline-code
+				const word = SourceTextToFieldWord(match[2]);
 
 				const meaning = replaceHtmlEntities(match[3]);
+				const isMarked = WordComparator(settings.word_sets_data, word ?? '');
+
 				matches.push({
 					word,
 					meaning,
 					line: lineNumber,
 					isSentence: true,
+					isMarked: isMarked,
 					isExistAnki: isExistAnki,
 					ankiID: ankiID,
 				});
@@ -235,8 +240,17 @@ export async function parseFieldsFromSource(
 		});
 
 		// Push sorted matches to wordDataArray
-		sortedMatches.forEach(({ word, meaning, line, isSentence, isExistAnki, ankiID }) =>
-			wordDataArray.push({ word, meaning, line, isSentence, isExistAnki, ankiID })
+		sortedMatches.forEach(
+			({ word, meaning, line, isSentence, isMarked, isExistAnki, ankiID }) =>
+				wordDataArray.push({
+					word,
+					meaning,
+					line,
+					isSentence,
+					isMarked,
+					isExistAnki,
+					ankiID,
+				})
 		);
 	});
 

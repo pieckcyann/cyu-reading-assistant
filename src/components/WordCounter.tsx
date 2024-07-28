@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 
 import { getWordCount } from '../func/WordCount';
 import { useState } from 'react';
+import { Notice } from 'obsidian';
 
 interface wordCounterProps {
 	className?: string;
@@ -34,19 +35,27 @@ const WordCounter: React.FC<wordCounterProps> = ({
 };
 
 export async function mountWordCounter(containerEl: HTMLElement) {
-	const readpage = containerEl.querySelector('.frontmatter');
-	if (!readpage) return;
+	// const readpage = containerEl.querySelector('.frontmatter');
+
+	let container: HTMLHeadElement | null = null;
+	const headers = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+	for (const tag of headers) {
+		container = containerEl.querySelector(tag);
+		if (container) break;
+	}
+
+	if (!container) return;
 
 	const div = document.createElement('div');
-	readpage.parentElement?.appendChild(div);
+	// container.parentElement?.appendChild(div);
+	container.appendChild(div);
 	const root = createRoot(div);
 
 	const wordCount = await getWordCountOfArticle();
 
 	root.render(
-		<React.StrictMode>
-			<WordCounter className="ra-count-display" textContent={wordCount + ' words'} />
-		</React.StrictMode>
+		<WordCounter className="ra-count-display" textContent={wordCount + ' words'} />
 	);
 }
 

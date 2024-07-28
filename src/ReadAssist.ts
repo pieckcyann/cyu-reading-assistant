@@ -1,22 +1,28 @@
 import { App, MarkdownRenderChild, MarkdownView, Notice, TFile } from 'obsidian';
 import { ReadAssistPluginSettings } from 'settings/Settings';
 import { WordComparator } from 'func/WordMarkCheck';
-import { iterateLabelsAndInputs } from './func/ParseComment';
+import { iterateLabelsAndInputs, parseFieldsFromPreview } from './func/ParseComment';
 import { mountWordCounter, unmountWordCounter } from './components/WordCounter';
 
 import { adjustInputWidth, getInputTextWidth } from './func/InputAdjuest';
 import { ExportManager } from 'func/ExportWordsToAnki';
+import { updateInputValueInFile } from 'func/UpdateMdFile';
 
 export default class ReadAssistance extends MarkdownRenderChild {
+	app: App;
+	activeFile: TFile;
+
 	constructor(
-		private app: App,
-		public activeFile: TFile,
+		app: App,
+		activeFile: TFile,
 		public activeLeafView: MarkdownView,
 		public renderedDiv: HTMLElement,
 		public pathToWordSets: string,
 		public settings: ReadAssistPluginSettings
 	) {
 		super(renderedDiv);
+		this.app = app;
+		this.activeFile = activeFile;
 	}
 
 	async onload() {
@@ -24,7 +30,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		this.setForInputs();
 		this.registerEvents();
 
-		this.checkCounter();
+		this.renderCounter();
 	}
 
 	unload() {
@@ -32,11 +38,20 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		unmountWordCounter(this.containerEl);
 	}
 
-	checkCounter = () => {
-		const wordCounter = this.containerEl.querySelector(
-			'.ra-count-display'
-		) as HTMLElement;
-		if (!wordCounter) mountWordCounter(this.containerEl);
+	renderCounter = () => {
+		// const wordCounter = this.containerEl.querySelector(
+		// 	'.ra-count-display'
+		// ) as HTMLElement;
+		// mountWordCounter(this.containerEl);
+
+		// console.log(activeLeafView.containerEl);
+
+		// const activeLeafView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		// if (!activeLeafView) return;
+		// const wordCounter = activeLeafView.contentEl.querySelector('.ra-count-display');
+		// if (wordCounter) return;
+
+		mountWordCounter(this.containerEl);
 	};
 
 	registerEvents() {
@@ -82,6 +97,18 @@ export default class ReadAssistance extends MarkdownRenderChild {
 						textInput = inputs[1];
 					}
 
+					let labelWord = '';
+
+					parseFieldsFromPreview(
+						label.parentElement!,
+						(_previewLabel: HTMLElement, previewWord: string, previewMeaning: string) => {
+							if (textInput.value !== previewMeaning) {
+								return;
+							}
+							labelWord = previewWord;
+						}
+					);
+
 					// 修复嵌套label的点击事件混乱
 					label.addEventListener('click', (event) => {
 						event.preventDefault();
@@ -89,7 +116,22 @@ export default class ReadAssistance extends MarkdownRenderChild {
 						if (checkboxInput) {
 							checkboxInput.checked = !checkboxInput.checked;
 						}
+						const labelTag = event.target as HTMLLabelElement;
+
+						const offsetX = 10;
+						const offsetY = 130;
+						const left = event.clientX + offsetX + 'px';
+						const top = event.clientY - offsetY + 'px';
+						textInput.style.left = left;
+						textInput.style.top = top;
+
+						// 设置其中的 text input 宽度自适应
 						adjustInputWidth(textInput);
+
+						// 点击发音
+						if (checkboxInput.checked && !labelTag.className.contains('sentence')) {
+							this.wordSpeak(labelWord);
+						}
 					});
 
 					// 右键点击复制
@@ -101,17 +143,26 @@ export default class ReadAssistance extends MarkdownRenderChild {
 					});
 
 					// 添加星标span
-					if (this.settings.is_mark_star == true) {
-						const isMarked = WordComparator(
-							this.settings.word_sets_data,
-							label.textContent ?? ''
-						);
-						if (isMarked) {
-							const starSpan = document.createElement('span');
-							starSpan.addClass('ra-star');
-							label.appendChild(starSpan);
+					parseFieldsFromPreview(
+						label.parentElement!,
+						(_previewLabel: HTMLElement, previewWord: string, previewMeaning: string) => {
+							if (textInput.value !== previewMeaning) {
+								return;
+							}
+
+							if (this.settings.is_mark_star == true) {
+								const isMarked = WordComparator(
+									this.settings.word_sets_data,
+									previewWord
+								);
+								if (isMarked) {
+									const starSpan = document.createElement('span');
+									starSpan.addClass('ra-star');
+									label.appendChild(starSpan);
+								}
+							}
 						}
-					}
+					);
 				}
 			}
 		);
@@ -157,7 +208,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		const textInput = event.target as HTMLInputElement;
 		const label = textInput.parentElement ?? null;
 		/* eslint-disable prefer-const */
-		let labelText = { value: (label?.textContent ?? '').trim() };
+		let labelText = { value: label?.textContent ?? '' };
 		const oldValue = textInput.defaultValue;
 		const newValue = textInput.value;
 
@@ -165,29 +216,46 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			event.preventDefault();
 			event.stopPropagation();
 
-			new Notice('xxxxxxxxxxxxx');
-
 			checkChildrenLabelTag(label, labelText);
 			checkChildrenDelTag(label, labelText);
+			checkChildrenStrongTag(label, labelText);
 
-			await this.updateInputValueInFile(
+			await updateInputValueInFile(
+				this.app,
 				labelText.value,
 				oldValue,
 				newValue,
 				label.classList.contains('sentence'),
 				label.classList.contains('nested'),
-				label.hasAttribute('data-anki-id')
+				label.hasAttribute('data-anki-id') ? label.getAttribute('data-anki-id') : ''
 			);
 
-			// if (!label.hasAttribute('data-anki-id')) {
-			// 	const em = new ExportManager(this.app);
-			// 	em.exportSingleWordsToAnki({
-			// 		word: labelText.value,
-			// 		meaning: newValue,
-			// 		isSentence: label.classList.contains('sentence'),
-			// 		ankiID: Number(label.getAttribute('data-anki-id')),
-			// 	});
-			// }
+			// 同时更新 anki 中的字段
+			if (label.hasAttribute('data-anki-id')) {
+				const em = new ExportManager(this.app, this.settings);
+				let isFinded = false;
+
+				parseFieldsFromPreview(
+					label.parentElement!,
+					(_previewLabel: HTMLElement, previewWord: string, previewMeaning: string) => {
+						if (newValue !== previewMeaning) {
+							return;
+						}
+						em.exportSingleWordsToAnki({
+							word: previewWord,
+							meaning: newValue,
+							// isSentence: label.classList.contains('sentence'),
+							// isMarked: WordComparator(this.settings.word_sets_data, word ?? ''),
+							ankiID: Number(label.getAttribute('data-anki-id')),
+						});
+						isFinded = true;
+					}
+				);
+
+				if (!isFinded) {
+					new Notice('查找单词与含义时出错！');
+				}
+			}
 		}
 
 		function checkChildrenDelTag(label: HTMLElement, labelTextObj: { value: string }) {
@@ -207,20 +275,31 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			if (childrenLabels.length > 0) {
 				childrenLabels.forEach((childrenLabel) => {
 					let childrenLabelText = {
-						value: (childrenLabel?.textContent ?? '').trim(),
+						value: childrenLabel?.textContent ?? '',
 					};
 					const childrenInputText =
 						(childrenLabel.querySelector('input[type="text"]') as HTMLInputElement)
 							?.value || '';
 					let quoteType;
 					newValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`);
+					let ankiID = childrenLabel.hasAttribute('data-anki-id')
+						? ` data-anki-id="${childrenLabel.getAttribute('data-anki-id')}"`
+						: '';
 					labelTextObj.value = labelTextObj.value.replace(
 						childrenLabelText.value,
-						`<label>${childrenLabelText.value}<input value=${quoteType}${childrenInputText}${quoteType}></label>`
+						`<label${ankiID}>${childrenLabelText.value}<input value=${quoteType}${childrenInputText}${quoteType}></label>`
 					);
 					checkChildrenDelTag(childrenLabel, childrenLabelText);
 				});
 			}
+		}
+
+		function checkChildrenStrongTag(label: HTMLElement, labelTextObj: { value: string }) {
+			const strongTags = label.querySelectorAll('strong');
+			strongTags.forEach((strong) => {
+				const strongText = strong.innerText;
+				labelTextObj.value = labelTextObj.value.replace(strongText, `**${strongText}**`);
+			});
 		}
 	};
 
@@ -251,130 +330,16 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		);
 	}
 
-	// 替换源码模式下文本
-	async updateInputValueInFile(
-		labelText: string,
-		oldValue: string,
-		newValue: string,
-		isSentence: boolean,
-		isNested: boolean,
-		isHasAnkidID: boolean
-	): Promise<void> {
-		const file = this.activeFile;
-		if (!file) return;
-		const fileContent = await this.app.vault.read(file);
-
-		const labelClass = generateLabelRegex(isSentence, isNested, isHasAnkidID);
-
-		let regex = getRegexForLabel(labelText, oldValue, labelClass);
-		const linkRegex = /\[([^\]]+)\]\(\)/g;
-		// const footnoteRegex = /\[\^(\d+)\]/g
-
-		if ((fileContent.match(regex) || []).length < 1) {
-			let linkMatch;
-			while ((linkMatch = linkRegex.exec(fileContent)) !== null) {
-				const linkText = linkMatch[1];
-				if (labelText.includes(linkText)) {
-					labelText = labelText.replace(linkText, `[${linkText}]()`);
-				}
-			}
-
-			// 检测 footnote 格式并替换
-			// let footnoteMatch;
-			// while ((footnoteMatch = footnoteRegex.exec(fileContent)) !== null) {
-			//     const footnoteText = footnoteMatch[1];
-			//     if (labelText.includes(footnoteText)) {
-			//         labelText = labelText.replace(footnoteText, `[^${footnoteText}]`);
-			//         new Notice(footnoteText);
-			//     }
-			// }
-
-			regex = getRegexForLabel(labelText, oldValue, labelClass);
-		}
-
-		// const regAnkiId = `(?:\\s+data-anki-id=["'](\\d+)["'])?`;
-		// ${regAnkiId}
-
-		// const newFileContent = fileContent.replace(
-		// 	regex,
-		// 	`<label${regAnkiId}${labelClass}>${labelText}<input value=${quoteType}${newValue}${quoteType}${labelClass}></label>`
-		// );
-		const oldLabelText = fileContent.match(regex);
-		if (!oldLabelText) return;
-
-		const newFileContent = fileContent.replace(
-			oldLabelText[0],
-			oldLabelText[0].replace(oldValue, newValue)
-		);
-		await this.app.vault.modify(file, newFileContent);
-		showNoticeForMatchCount(fileContent, regex);
-
-		function getRegexForLabel(
-			labelText: string,
-			oldValue: string,
-			labelClass: RegExp
-		): RegExp {
-			const escapedLabelText = escapeRegExp(labelText);
-			const escapedOldValue = escapeRegExp(oldValue);
-			// const escapedlabelClass = escapeRegExp(labelClass);
-			const escapedlabelClass = labelClass;
-
-			let quoteType;
-			oldValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`);
-
-			return new RegExp(
-				`(<label${escapedlabelClass}>)${escapedLabelText}(<input value=${quoteType}${escapedOldValue}${quoteType}${labelClass}></label>)`,
-				'gm'
-			);
-		}
-
-		function generateLabelRegex(
-			isSentence: boolean,
-			isNested: boolean,
-			isHasAnkidID: boolean
-		) {
-			let classPart = '';
-			if (isSentence) {
-				classPart = 'class="sentence"';
-			} else if (isNested) {
-				classPart = 'class="nested"';
-			}
-
-			let ankiIdPart = '';
-			if (isHasAnkidID) {
-				ankiIdPart = 'anki-id="\\d+"';
-			}
-
-			let regexString = '<label';
-
-			if (classPart && ankiIdPart) {
-				// Both attributes
-				regexString += ` ${ankiIdPart} ${classPart}`;
-			} else if (classPart || ankiIdPart) {
-				// One attribute
-				regexString += ` ${classPart}${ankiIdPart}`;
-			}
-
-			regexString += '>';
-
-			return new RegExp(regexString);
-		}
-
-		function showNoticeForMatchCount(fileContent: string, regex: RegExp): void {
-			const matchCount = (fileContent.match(regex) || []).length;
-			if (matchCount === 1) {
-				new Notice(`提示：笔记内容已修改`);
-			} else if (matchCount > 1) {
-				new Notice(`提示：重复了 ${matchCount} 处`);
-			} else if (matchCount < 1 || !fileContent.match(regex)) {
-				new Notice(`警告：未找到对应的label标签文本`);
-			}
-		}
-
-		// 替换：加反斜杠变为特殊字符
-		function escapeRegExp(str: string): string {
-			return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-		}
+	wordSpeak(word: string) {
+		var speech = new SpeechSynthesisUtterance();
+		speech.text = word;
+		speech.volume = 0.9; // 音量 0 to 1
+		speech.rate = 1; // 语速 0.1 to 9
+		speech.pitch = 1; // 音高 0 to 2, 1=normal
+		// speech.voice = window.speechSynthesis.getVoices().filter((v) => v.lang == 'en-GB')[0];
+		speech.voice = window.speechSynthesis.getVoices().filter((v) => v.lang == 'en-US')[0];
+		speechSynthesis.cancel();
+		speechSynthesis.speak(speech);
 	}
 
 	clearEffectsOnEditorChange() {

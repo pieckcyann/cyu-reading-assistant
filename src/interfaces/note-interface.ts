@@ -10,6 +10,6 @@ export interface AnkiConnectNote {
 }
 
 export interface AnkiConnectNoteAndID {
-	note: AnkiConnectNote;
+	fields: Record<string, string>;
 	identifier: number;
 }

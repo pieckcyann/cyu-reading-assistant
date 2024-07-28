@@ -31,16 +31,9 @@ import {
 import { createRoot } from 'react-dom/client';
 import { extractWordComparedDatas } from 'func/WordMarkCheck';
 import { ExportManager } from 'func/ExportWordsToAnki';
-import { AnkiConnectNote } from 'interfaces/note-interface';
 
-export interface FieldData {
-	word: string;
-	meaning: string;
-	line: number;
-	isSentence: boolean;
-	isExistAnki: boolean;
-	ankiID: number;
-}
+import { FieldData } from 'interfaces/field-interface';
+import { mountWordCounter, unmountWordCounter } from 'components/WordCounter';
 
 export default class ReadAssistPlugin extends Plugin {
 	app: App;
@@ -73,6 +66,7 @@ export default class ReadAssistPlugin extends Plugin {
 		if (activeLeafView == null) return;
 		const topDiv = activeLeafView.containerEl.find('.flash-card-div');
 		removeRow(topDiv);
+		unmountWordCounter(activeLeafView.containerEl);
 	}
 
 	checkIsSetDir = (): boolean => {
@@ -89,6 +83,7 @@ export default class ReadAssistPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (leaf: WorkspaceLeaf | null) => {
 				this.renderWordList();
+				// new Notice('活动页改变了！');
 			})
 		);
 
@@ -144,14 +139,18 @@ export default class ReadAssistPlugin extends Plugin {
 			return;
 		}
 
-		const activeFileText = activeLeafView.currentMode.get();
+		const floatingTOC = activeLeafView.containerEl.find('.floating-toc-div');
+		if (floatingTOC) {
+			floatingTOC.style.display = 'none';
+		}
 
+		// 创建单词含义对照表
 		createTopDiv(activeLeafView.containerEl);
 		const topDiv = activeLeafView.containerEl.find('.flash-card-div');
 		const root = createRoot(topDiv);
 
 		let wordDataArray: FieldData[] = [];
-		await parseFieldsFromSource(activeFileText, (array) => {
+		await parseFieldsFromSource(this.app, this.settings, (array) => {
 			wordDataArray = array;
 		});
 		const wrapper = createWrapper(this, activeLeafView, wordDataArray);
@@ -173,7 +172,7 @@ export default class ReadAssistPlugin extends Plugin {
 		const root = createRoot(topDiv);
 
 		let wordDataArray: FieldData[] = [];
-		await parseFieldsFromSource(activeFileText, (array) => {
+		await parseFieldsFromSource(this.app, this.settings, (array) => {
 			wordDataArray = array;
 		});
 		const wrapper = createWrapper(this, activeLeafView, wordDataArray);
@@ -269,7 +268,7 @@ export default class ReadAssistPlugin extends Plugin {
 				if (activeLeafView == null) return;
 				const activeFileText = activeLeafView.currentMode.get();
 
-				const em = new ExportManager(this.app, activeFileText);
+				const em = new ExportManager(this.app, this.settings, activeFileText);
 				em.exportAllWordsToAnki();
 			},
 		});
