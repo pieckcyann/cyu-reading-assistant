@@ -27,7 +27,12 @@ const Row = ({
 
 	useEffect(() => {
 		const handleContextMenu = (event: MouseEvent) => {
-			event.preventDefault(); // 阻止默认右键菜单
+			event.preventDefault();
+
+			// 移除其他 row 元素上的 row-active 类名
+			document.querySelectorAll('.row.row-active').forEach((el) => {
+				el.classList.remove('row-active');
+			});
 
 			// 获取 Row 元素
 			const rowElement = rowRef.current;
@@ -116,12 +121,13 @@ const onClickHandle = (
 	parseFieldsFromPreview(
 		view.containerEl,
 		(previewLabel: HTMLElement, previewWord: string, previewMeaning: string) => {
+			if (wordOfLabel === previewWord || meaningOfLabel === previewMeaning) {
+				// new Notice(`预览模式：${previewWord}`);
+				// new Notice(`预览模式：${previewMeaning}`);
+				// new Notice(`源码模式：${wordOfLabel}`);
+				// new Notice(`源码模式：${meaningOfLabel}`);
+			}
 			if (wordOfLabel === previewWord && meaningOfLabel === previewMeaning) {
-				// new Notice(`预览单词：${word}`);
-				// new Notice(`预览释义：${meaning}`);
-				// new Notice(`源码单词：${wordOfLabel}`);
-				// new Notice(`源码释义：${meaningOfLabel}`);
-
 				previewLabel.style.backgroundColor = 'aqua';
 
 				setTimeout(() => {

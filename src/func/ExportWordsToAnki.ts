@@ -118,11 +118,13 @@ export class ExportManager {
 		await parseFieldsFromSource(this.app, this.settings, (array) => {
 			for (let arr of array) {
 				const wordType = this.judgePartOfWord(arr);
-				const parentDir = this.extractDir(filePath);
 
-				const isNPEE = parentDir === 'NPEE';
+				// const parentDir = this.extractDir(filePath);
+				// const isNPEE = parentDir === 'NPEE';
+
+				const isNPEE = filePath.includes('NPEE');
 				if (isNPEE) {
-					this.deckName = `NPEE`;
+					this.deckName = `NPEE::${wordType}`;
 				} else {
 					this.deckName = `Periodical::${wordType}`;
 				}

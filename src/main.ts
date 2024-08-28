@@ -43,7 +43,6 @@ export default class ReadAssistPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-
 		this.addSettingTab(new ReadAssistSettingTab(this));
 
 		await this.registerEvents();
@@ -57,7 +56,6 @@ export default class ReadAssistPlugin extends Plugin {
 			this.pathToWordSets
 		);
 		this.saveSettings();
-
 		this.registerCommands();
 	}
 
@@ -76,20 +74,14 @@ export default class ReadAssistPlugin extends Plugin {
 	};
 
 	registerEvents = async () => {
-		this.app.workspace.onLayoutReady(async () => {
-			this.render();
-		});
+		await this.render();
 
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (leaf: WorkspaceLeaf | null) => {
 				this.renderWordList();
-				// new Notice('活动页改变了！');
 			})
 		);
 
-		// this.app.vault.on("modify", () => { })
-		// this.registerEvent(this.app.metadataCache.on("changed", () => { }))
-		// this.registerEvent(this.app.metadataCache.on("resolved", () => { }))
 		this.registerEvent(
 			this.app.metadataCache.on('changed', () => {
 				this.updateWordList();
@@ -97,7 +89,10 @@ export default class ReadAssistPlugin extends Plugin {
 			})
 		);
 
-		// this.registerEvent(this.app.workspace.on("file-open", () => { }))
+		// this.app.workspace.onLayoutReady(async () => {});
+		// this.app.vault.on("modify", () => {})
+		// this.registerEvent(this.app.workspace.on("file-open", () => {}))
+		// this.registerEvent(this.app.metadataCache.on("resolved", () => {}))
 	};
 
 	render = async () => {
@@ -112,6 +107,7 @@ export default class ReadAssistPlugin extends Plugin {
 				if (isSetDirectory) {
 					const activeLeafView = this.app.workspace.getActiveViewOfType(MarkdownView);
 					const activeFile = this.app.workspace.getActiveFile();
+
 					if (activeLeafView && activeFile) {
 						ctx.addChild(
 							new ReadAssistance(
@@ -139,20 +135,22 @@ export default class ReadAssistPlugin extends Plugin {
 			return;
 		}
 
+		// 隐藏 floating-toc 插件
 		const floatingTOC = activeLeafView.containerEl.find('.floating-toc-div');
 		if (floatingTOC) {
 			floatingTOC.style.display = 'none';
 		}
 
-		// 创建单词含义对照表
+		// 创建 react root
 		createTopDiv(activeLeafView.containerEl);
 		const topDiv = activeLeafView.containerEl.find('.flash-card-div');
 		const root = createRoot(topDiv);
-
+		// 从文件内容中提取出单词列表
 		let wordDataArray: FieldData[] = [];
 		await parseFieldsFromSource(this.app, this.settings, (array) => {
 			wordDataArray = array;
 		});
+		// 新建单词列表组件并挂载
 		const wrapper = createWrapper(this, activeLeafView, wordDataArray);
 		root.render(wrapper);
 	};

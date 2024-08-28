@@ -3,26 +3,27 @@ import { FieldData } from 'interfaces/field-interface';
 import { App, MarkdownView, Notice } from 'obsidian';
 import { WordComparator } from './WordMarkCheck';
 import { ReadAssistPluginSettings } from 'settings/Settings';
-import { SourceTextToFieldWord, innerHTMLToTextContent } from 'utils/StringReplace';
+import {
+	sourceTextToFieldWord,
+	innerHTMLToTextContent,
+	entitiesToBrackets,
+	bracketsToEntities,
+} from 'utils/StringReplace';
 
 export function iterateLabelsAndInputs(
 	containerEl: HTMLElement,
-	callback: (label: HTMLLabelElement, inputs: HTMLInputElement[]) => void
+	callback: (
+		label: HTMLLabelElement,
+		textInput: HTMLInputElement,
+		allChildElements: HTMLElement[]
+	) => void
 ) {
 	const labels = containerEl.findAll('label') as HTMLLabelElement[];
 	for (const label of labels) {
-		const directInputs = Array.from(label.children).filter(
-			(child) => child.tagName === 'INPUT'
-		) as HTMLInputElement[];
-		const grandchildrenInputs = Array.from(
-			label.querySelectorAll('label > input')
-		) as HTMLInputElement[];
-		const inputs = [...directInputs, ...grandchildrenInputs];
-		/**
-		 * const checkbox = inputs[0]
-		 * const textinput = inputs[1]
-		 */
-		callback(label, inputs);
+		const textInputs = label.findAll('input') as HTMLInputElement[];
+		const allChildElements = Array.from(label.children) as HTMLElement[];
+		// console.log(label.textContent + '\n -> \n' + textInputs[textInputs.length - 1].value);
+		callback(label, textInputs[textInputs.length - 1], allChildElements);
 	}
 }
 
@@ -41,27 +42,38 @@ export function parseFieldsFromPreview(
 		const inputs = [...directInputs, ...grandchildrenInputs];
 
 		let previewWord = previewLabel.innerText;
-		let previewMeaning = inputs[1].value;
+		let previewMeaning = inputs[0].value;
 
-		const del = previewLabel.querySelector('del');
-		if (del) {
-			previewWord = del.getAttribute('data-prototype') || previewWord;
-		}
+		// 情况一：只选择 previewLabel 的直接子 <del> 元素
+		const directDels = Array.from(previewLabel.children).filter(
+			(child) => child.tagName === 'DEL'
+		) as HTMLElement[];
 
-		if (previewLabel.classList.contains('sentence')) {
+		if (directDels.length > 0) {
+			for (const del of directDels) {
+				previewWord = del.getAttribute('data-prototype') || previewWord;
+			}
+		} else if (previewLabel.classList.contains('sentence')) {
+			// 情况二
 			previewWord = innerHTMLToTextContent(previewLabel.innerHTML);
-
 			previewMeaning = (previewLabel.findAllSelf('input.sentence')[0] as HTMLInputElement)
 				.value;
-		}
 
-		if (previewLabel.classList.contains('nested')) {
+			// 如果有多个 input.sentence 元素，使用最后一个值：
+			// const inputs = previewLabel.findAllSelf('input.sentence') as HTMLInputElement[];
+			// const lastInput = inputs[inputs.length - 1];
+			// previewMeaning = lastInput.value;
+		} else if (previewLabel.classList.contains('nested')) {
+			// 情况三
 			previewWord = previewLabel.textContent ?? '';
-
 			previewMeaning = (previewLabel.findAllSelf('input.nested')[0] as HTMLInputElement)
 				.value;
-		}
 
+			// 如果有多个 input.nested 元素，使用最后一个值：
+			// const inputs = previewLabel.findAllSelf('input.nested') as HTMLInputElement[];
+			// const lastInput = inputs[inputs.length - 1];
+			// previewMeaning = lastInput.value;
+		}
 		callback(previewLabel, previewWord, previewMeaning);
 	}
 }
@@ -85,7 +97,7 @@ export async function parseFieldsFromSource(
 	const wordDataArray: FieldData[] = [];
 
 	// const regExpText = `[\\s\\S]*?`
-	const regExpText = `(?:(?!<[^>]+>).)*`;
+	const regExpText = `(?:(?!<[^>]+>).)*?`;
 	const regAnkiId = `(?:\\s+data-anki-id=["'](\\d+)["'])?`;
 
 	const regExpSingleWord = new RegExp(
@@ -99,7 +111,7 @@ export async function parseFieldsFromSource(
 	);
 
 	const regExpNonPrototype = new RegExp(
-		`<label${regAnkiId}>${regExpText}<del data-prototype=["']([^"']+)["']>${regExpText}<\\/del>${regExpText}<input\\s+value=["']([^"']+)["']><\\/label>`,
+		`<label${regAnkiId}>${regExpText}<del data-prototype=["']([^"']+)["']>.*?<\\/del>${regExpText}<input\\s+value=["']([^"']+)["']><\\/label>`,
 		'gm'
 	);
 
@@ -113,28 +125,6 @@ export async function parseFieldsFromSource(
 		'gm'
 	);
 
-	const replaceHtmlEntities = (str: string): string => {
-		return str.replace(
-			/&(lt|gt);/g,
-			(_match, entity) =>
-				({
-					lt: '<',
-					gt: '>',
-				}[entity as keyof { lt: string; gt: string }])
-		);
-	};
-
-	const escapeHtmlTags = (str: string): string => {
-		return str.replace(
-			/[<>]/g,
-			(match) =>
-				({
-					'<': '&lt;',
-					'>': '&gt;',
-				}[match as keyof { '<': string; '>': string }])
-		);
-	};
-
 	lines.forEach(async (lineContent: string, lineNumber: number) => {
 		const matches: FieldData[] = [];
 
@@ -144,8 +134,8 @@ export async function parseFieldsFromSource(
 			if (match[2] && match[3]) {
 				const isExistAnki = !!match[1];
 				const ankiID = Number(match[1]);
-				const word = match[2];
-				const meaning = replaceHtmlEntities(match[3]);
+				const word = sourceTextToFieldWord(match[2]);
+				const meaning = entitiesToBrackets(match[3]);
 				const isMarked = WordComparator(settings.word_sets_data, word ?? '');
 
 				matches.push({
@@ -166,9 +156,14 @@ export async function parseFieldsFromSource(
 			if (match[2] && match[3]) {
 				const isExistAnki = !!match[1];
 				const ankiID = Number(match[1]);
-				const word = SourceTextToFieldWord(match[2]);
-
-				const meaning = replaceHtmlEntities(match[3]);
+				let word = sourceTextToFieldWord(match[2]);
+				if (match[2].includes('</del>')) {
+					const regExpDel = new RegExp(`<del data-prototype=["']([^"']+)["']>`, 'gm');
+					const delMatch = Array.from(match[2].matchAll(regExpDel));
+					const lastMatch = delMatch[delMatch.length - 1];
+					word = sourceTextToFieldWord(lastMatch[1]);
+				}
+				const meaning = entitiesToBrackets(match[3]);
 				const isMarked = WordComparator(settings.word_sets_data, word ?? '');
 
 				matches.push({
@@ -189,8 +184,8 @@ export async function parseFieldsFromSource(
 			if (match[2] && match[3]) {
 				const isExistAnki = !!match[1];
 				const ankiID = Number(match[1]);
-				const word = match[2];
-				const meaning = replaceHtmlEntities(match[3]);
+				const word = sourceTextToFieldWord(match[2]);
+				const meaning = entitiesToBrackets(match[3]);
 				const isMarked = WordComparator(settings.word_sets_data, word ?? '');
 
 				matches.push({
@@ -215,9 +210,8 @@ export async function parseFieldsFromSource(
 			if (match[2] && match[3]) {
 				const isExistAnki = !!match[1];
 				const ankiID = Number(match[1]);
-				const word = SourceTextToFieldWord(match[2]);
-
-				const meaning = replaceHtmlEntities(match[3]);
+				const word = sourceTextToFieldWord(match[2]);
+				const meaning = entitiesToBrackets(match[3]);
 				const isMarked = WordComparator(settings.word_sets_data, word ?? '');
 
 				matches.push({
@@ -234,8 +228,8 @@ export async function parseFieldsFromSource(
 
 		// Sort matches based on their appearance in lineContent
 		const sortedMatches = matches.sort((a, b) => {
-			const indexA = lineContent.indexOf(escapeHtmlTags(a.meaning)); // Sort by a.meaning instead of a.word
-			const indexB = lineContent.indexOf(escapeHtmlTags(b.meaning));
+			const indexA = lineContent.indexOf(bracketsToEntities(a.meaning)); // Sort by a.meaning instead of a.word
+			const indexB = lineContent.indexOf(bracketsToEntities(b.meaning));
 			return indexA - indexB;
 		});
 

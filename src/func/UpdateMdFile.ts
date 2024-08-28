@@ -2,7 +2,7 @@ import { App, Editor, EditorPosition, Notice } from 'obsidian';
 import { PromptModal } from '../components/PromptModal';
 import { TemplaterError } from 'utils/Error';
 import { AnkiConnectNote } from 'interfaces/note-interface';
-import { SourceTextToFieldWord } from 'utils/StringReplace';
+import { sourceTextToFieldWord } from 'utils/StringReplace';
 import { notice } from 'utils/Notice';
 // import escapeHTML from 'escape-html';
 
@@ -112,9 +112,9 @@ async function addCommentInFile({
 
 	if (newFileContent !== fileContent) {
 		await this.app.vault.modify(file, newFileContent);
-		new Notice(`提示：已修改`);
+		new Notice(`已向MD文件中添加标签！`);
 	} else {
-		new Notice(`提示：未找到文本！`);
+		new Notice(`警告：未找到文本！`);
 		// new Notice(`articleContent is ${articleContent}!`)
 		// new Notice(`labelText is ${labelText}!`)
 		// new Notice(`commentText is ${commentText}!`)
@@ -141,8 +141,6 @@ export async function updateInputValueInFile(
 	const file = this.app.workspace.getActiveFile();
 	if (!file) return;
 
-	console.log(labelText);
-
 	const oldFileContent = await app.vault.read(file);
 	let completeLabel = getRegexForLabel(
 		labelText,
@@ -161,6 +159,8 @@ export async function updateInputValueInFile(
 	);
 	if (oldFileContent == newFileContent) {
 		new Notice(`尝试修改笔记内容失败。。。`);
+		console.log('labelText: ' + labelText);
+		console.log('completeLabel: ' + completeLabel);
 		return;
 	}
 
@@ -227,6 +227,8 @@ export async function updateInputValueInFile(
 		}
 		let quoteType;
 		oldValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`);
+		// 还原 footnote
+		labelText = labelText.replace(/\[(\d{1,3})\]/g, '[^$1]');
 		return `<label${labelClass}>${labelText}<input value=${quoteType}${oldValue}${quoteType}${inputClass}></label>`;
 	}
 
@@ -309,7 +311,7 @@ export async function addAnkiID({
 
 		if (!regex.toString().includes('<del')) {
 			for (const match of matches) {
-				let matchWord = SourceTextToFieldWord(match[0]);
+				let matchWord = sourceTextToFieldWord(match[0]);
 
 				const word = notes_to_new[index].fields.Word;
 

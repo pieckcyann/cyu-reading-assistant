@@ -12,7 +12,7 @@ export function innerHTMLToTextContent(innerHTML: string): string {
 	);
 }
 
-export function SourceTextToFieldWord(sourceText: string): string {
+export function sourceTextToFieldWord(sourceText: string): string {
 	return (
 		clearMdFormatting(sourceText)
 			// HTML tag
@@ -33,5 +33,27 @@ export function clearMdFormatting(mdString: string): string {
 			.replace(/\[\^\d+\]/g, '')
 			// MD inline code
 			.replace(/`/g, '')
+	);
+}
+
+export function entitiesToBrackets(str: string): string {
+	return str.replace(
+		/&(lt|gt);/g,
+		(_match, entity) =>
+			({
+				lt: '<',
+				gt: '>',
+			}[entity as keyof { lt: string; gt: string }])
+	);
+}
+
+export function bracketsToEntities(str: string): string {
+	return str.replace(
+		/[<>]/g,
+		(match) =>
+			({
+				'<': '&lt;',
+				'>': '&gt;',
+			}[match as keyof { '<': string; '>': string }])
 	);
 }
