@@ -128,10 +128,12 @@ const onClickHandle = (
 				// new Notice(`源码模式：${meaningOfLabel}`);
 			}
 			if (wordOfLabel === previewWord && meaningOfLabel === previewMeaning) {
-				previewLabel.style.backgroundColor = 'aqua';
+				// previewLabel.style.backgroundColor = 'aqua';
+				previewLabel.style.setProperty('background-color', 'aqua', 'important');
 
 				setTimeout(() => {
-					previewLabel.style.backgroundColor = '';
+					// previewLabel.style.backgroundColor = '';
+					previewLabel.style.removeProperty('background-color');
 				}, 1000);
 
 				return;
@@ -178,18 +180,30 @@ export const setScrollTopWrapper = (Plugin: ReadAssistPlugin, newValue: number) 
 	}
 };
 
-const ItemCount = ({ count }: { count: number }) => (
-	<div className="item-count">Total fields: {count}</div>
+const ItemCount = ({
+	count,
+	lostWordsCount,
+}: {
+	count: number;
+	lostWordsCount: number;
+}) => (
+	<div className="item-count">
+		{lostWordsCount === count
+			? `Total fields: ${count}.`
+			: `Total fields: ${count}, but it still lost ${lostWordsCount - count} labels!!!`}
+	</div>
 );
 
 const Wrapper = ({
 	plugin,
 	children,
 	count,
+	lostWordsCount,
 }: {
 	plugin: ReadAssistPlugin;
 	children: React.ReactNode;
 	count: number;
+	lostWordsCount: number;
 }) => (
 	<div
 		className={`flash-card-wrapper${
@@ -199,7 +213,7 @@ const Wrapper = ({
 				: ' hide'
 		}`}
 	>
-		<ItemCount count={count} />
+		<ItemCount count={count} lostWordsCount={lostWordsCount} />
 		{children}
 	</div>
 );
@@ -207,7 +221,8 @@ const Wrapper = ({
 export function createWrapper(
 	Plugin: ReadAssistPlugin,
 	leaf: MarkdownView,
-	datasMap: FieldData[]
+	datasMap: FieldData[],
+	lostWordsCount: number
 ) {
 	const wrapper = leaf.containerEl.find('.flash-card-wrapper');
 	if (wrapper == null) return null;
@@ -228,7 +243,7 @@ export function createWrapper(
 	}
 
 	return (
-		<Wrapper plugin={Plugin} count={listItems.length}>
+		<Wrapper plugin={Plugin} count={listItems.length} lostWordsCount={lostWordsCount}>
 			{listItems}
 		</Wrapper>
 	);

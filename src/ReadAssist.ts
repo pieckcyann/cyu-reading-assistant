@@ -70,7 +70,8 @@ export default class ReadAssistance extends MarkdownRenderChild {
 			(
 				labelEl: HTMLLabelElement,
 				textInputEl: HTMLInputElement,
-				allChildElements: HTMLElement[]
+				allChildElements: HTMLElement[],
+				childLabels: HTMLLabelElement[]
 			) => {
 				textInputEl.setAttribute('data-isClicked', 'false');
 				textInputEl.setAttribute('type', 'text');
@@ -95,7 +96,8 @@ export default class ReadAssistance extends MarkdownRenderChild {
 					if (
 						(child.tagName.toLowerCase() === 'sup' &&
 							child.classList.contains('footnote-ref')) ||
-						child.tagName.toLowerCase() === 'del'
+						child.tagName.toLowerCase() === 'del' ||
+						child.classList.contains('footnote-link')
 					) {
 						child.addEventListener('mouseover', stopPropagation);
 						child.addEventListener('mousedown', stopPropagation);
@@ -118,54 +120,82 @@ export default class ReadAssistance extends MarkdownRenderChild {
 				// 鼠标按下
 				labelEl.addEventListener('mousedown', (event) => {
 					event.stopPropagation();
-					this.setLabelBgColor(isSentence, labelEl, {
-						blue: 'rgba(0, 114, 208, 0.5)',
-						red: 'rgba(199, 43, 108, 0.5)',
-					});
+					if (isSentence) {
+						labelEl.addClass('label-active-sentence');
+					} else {
+						labelEl.addClass('label-active');
+					}
 				});
 
 				// 鼠标抬起
 				labelEl.addEventListener('mouseup', (event) => {
 					event.stopPropagation();
-					labelEl.style.backgroundColor = 'transparent';
+					labelEl.classList.remove('label-active');
+					labelEl.classList.remove('label-active-sentence');
 				});
 
 				labelEl.addEventListener('click', (event) => {
 					const target = event.target as HTMLElement;
-					if (target && target.tagName.toLowerCase() !== 'label') return;
+					const isFootNote =
+						target.classList.contains('footnote-link') ||
+						target.classList.contains('footnote-ref');
+					if (isFootNote) return;
 
 					// 修复嵌套label的点击事件混乱
 					event.preventDefault();
 					event.stopPropagation();
+					const isClicked = textInputEl.getAttribute('data-isClicked') === 'true';
+					// new Notice(`${target.classList}`);
+					textInputEl.setAttribute('data-isClicked', isClicked ? 'false' : 'true');
+					textInputEl.style.display = isClicked ? 'none' : 'inline-block';
+					target.classList.toggle('cloze-hover', !isClicked);
 
-					if (textInputEl.getAttribute('data-isClicked') === 'false') {
-						textInputEl.setAttribute('data-isClicked', 'true');
-						textInputEl.style.display = 'inline-block';
-
-						// 点击发音
-						if (
-							labelEl.tagName.toLowerCase() === 'label' &&
-							!labelEl.classList.contains('sentence')
-						) {
-							labelWord = labelWord.replace(/(\[\d{1,3}\])/g, '');
-							this.wordSpeak(labelWord);
-						}
-					} else {
-						textInputEl.setAttribute('data-isClicked', 'false');
-						textInputEl.style.display = 'none';
+					// 点击发音
+					if (
+						!isClicked &&
+						labelEl.tagName.toLowerCase() === 'label' &&
+						!labelEl.classList.contains('sentence')
+					) {
+						labelWord = labelWord.replace(/(\[\d{1,3}\])/g, '');
+						this.wordSpeak(labelWord);
 					}
 				});
 
-				let hoverTimeout: number | undefined;
+				let hoverTimeout1: number | undefined;
+				let hoverTimeout2: number | undefined;
 
 				// 鼠标移入
 				labelEl.addEventListener('mouseover', (event) => {
 					event.preventDefault();
 					event.stopPropagation();
+					const target = event.target as HTMLElement;
+					const isFootNote =
+						target.classList.contains('footnote-link') ||
+						target.classList.contains('footnote-ref');
+					if (isFootNote) return;
+
 					if (textInputEl.getAttribute('data-isClicked') == 'false') {
-						hoverTimeout = window.setTimeout(() => {
-							textInputEl.style.display = 'inline-block';
-							this.setLabelBgColor(isSentence, labelEl);
+						if (hoverTimeout2) {
+							clearTimeout(hoverTimeout2); // 清除悬浮超时
+							hoverTimeout2 = undefined;
+						}
+
+						hoverTimeout1 = window.setTimeout(() => {
+							adjustInputWidth(textInputEl);
+							target.classList.add('cloze-hover');
+							const isEmTag = target.tagName.toLowerCase() === 'em';
+
+							if (!isEmTag || !isSentence) {
+								textInputEl.style.display = 'inline-block';
+								labelEl.classList.add('underline-expand');
+							}
+
+							for (const label of childLabels) {
+								label.style.paddingBottom = '0px';
+							}
+
+							labelEl.classList.add('wordLabelDel');
+
 							adjustTextInput(event);
 						}, 200);
 					}
@@ -177,12 +207,20 @@ export default class ReadAssistance extends MarkdownRenderChild {
 					event.stopPropagation();
 
 					if (textInputEl.getAttribute('data-isClicked') == 'false') {
-						if (hoverTimeout) {
-							clearTimeout(hoverTimeout); // 清除悬浮超时
-							hoverTimeout = undefined;
+						if (hoverTimeout1) {
+							clearTimeout(hoverTimeout1); // 清除悬浮超时
+							hoverTimeout1 = undefined;
 						}
 						textInputEl.style.display = 'none';
-						labelEl.style.backgroundColor = 'transparent';
+						(event.target as HTMLElement).classList.remove('cloze-hover');
+						labelEl.classList.remove('underline-expand');
+
+						hoverTimeout2 = window.setTimeout(() => {
+							for (const label of childLabels) {
+								label.style.paddingBottom = '';
+							}
+							labelEl.classList.remove('wordLabelDel');
+						}, 200);
 					}
 				});
 
@@ -251,18 +289,6 @@ export default class ReadAssistance extends MarkdownRenderChild {
 		);
 	}
 
-	setLabelBgColor(
-		isSentence: boolean,
-		element: HTMLElement,
-		colorMap: { blue: string; red: string } = {
-			blue: '#ecefe8',
-			red: 'rgba(199, 43, 108, 0.06)',
-		}
-	) {
-		const color = isSentence ? colorMap.red : colorMap.blue;
-		element.style.backgroundColor = color;
-	}
-
 	async setForInputs(): Promise<void> {
 		iterateLabelsAndInputs(
 			this.containerEl,
@@ -276,7 +302,6 @@ export default class ReadAssistance extends MarkdownRenderChild {
 				// 防止点击input触发label的active伪类(仅从显示效果上)
 				textInput.addEventListener('mousedown', (event) => {
 					event.stopPropagation();
-					this.setLabelBgColor(label.classList.contains('sentence'), label);
 				});
 				textInput.addEventListener('mouseup', () => {
 					label.removeAttribute('style');
@@ -299,29 +324,12 @@ export default class ReadAssistance extends MarkdownRenderChild {
 	private onInputKeyUp = async (event: KeyboardEvent) => {
 		const textInput = event.target as HTMLInputElement;
 		const label = textInput.parentElement ?? null;
-		/* eslint-disable prefer-const */
-		let labelText = { value: label?.textContent ?? '' };
 		const oldValue = textInput.defaultValue;
 		const newValue = textInput.value;
 
 		if (label && event.key === 'Enter' && newValue.trim() !== oldValue.trim()) {
-			event.preventDefault();
-			event.stopPropagation();
-
-			checkChildrenLabelTag(label, labelText);
-			checkChildrenDelTag(label, labelText);
-			checkChildrenStrongTag(label, labelText);
-			checkChildrenEmTag(label, labelText);
-
-			await updateInputValueInFile(
-				this.app,
-				labelText.value,
-				oldValue,
-				newValue,
-				label.classList.contains('sentence'),
-				label.classList.contains('nested'),
-				label.hasAttribute('data-anki-id') ? label.getAttribute('data-anki-id') : ''
-			);
+			// 更新 ob 中的 input.value
+			await updateInputValueInFile(this.app, oldValue, newValue);
 
 			// 同时更新 anki 中的字段
 			if (label.hasAttribute('data-anki-id')) {
@@ -346,78 +354,9 @@ export default class ReadAssistance extends MarkdownRenderChild {
 				);
 
 				if (!isFinded) {
-					new Notice('查找单词与含义时出错！');
+					new Notice('Warning: 查找单词与含义时出错！');
 				}
 			}
-		}
-
-		function checkChildrenDelTag(label: HTMLElement, labelTextObj: { value: string }) {
-			const directDels = Array.from(label.children).filter(
-				(child) => child.tagName === 'DEL'
-			) as HTMLElement[];
-
-			if (directDels.length > 0) {
-				for (const del of directDels) {
-					const delText = del.innerText;
-					const delAttr = del.getAttribute('data-prototype');
-
-					// 如果 delText 是空的，获取 del 标签的位置
-					const delPosition = delText
-						? labelTextObj.value.indexOf(delText)
-						: labelTextObj.value.length;
-
-					if (delPosition !== -1) {
-						// 使用 slice 和拼接来插入或替换 del 标签
-						labelTextObj.value =
-							labelTextObj.value.slice(0, delPosition) +
-							`<del data-prototype="${delAttr}">${delText}</del>` +
-							labelTextObj.value.slice(delPosition + delText.length);
-					}
-				}
-			}
-		}
-
-		function checkChildrenLabelTag(label: HTMLElement, labelTextObj: { value: string }) {
-			const childrenLabels = label.querySelectorAll('label');
-			if (childrenLabels.length > 0) {
-				childrenLabels.forEach((childrenLabel) => {
-					let childrenLabelText = {
-						value: childrenLabel?.textContent ?? '',
-					};
-					const childrenInputText =
-						(childrenLabel.querySelector('input[type="text"]') as HTMLInputElement)
-							?.value || '';
-					let quoteType;
-					newValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`);
-					let ankiID = childrenLabel.hasAttribute('data-anki-id')
-						? ` data-anki-id="${childrenLabel.getAttribute('data-anki-id')}"`
-						: '';
-					labelTextObj.value = labelTextObj.value.replace(
-						childrenLabelText.value,
-						`<label${ankiID}>${childrenLabelText.value}<input value=${quoteType}${childrenInputText}${quoteType}></label>`
-					);
-					checkChildrenDelTag(childrenLabel, childrenLabelText);
-				});
-			}
-		}
-
-		function checkChildrenStrongTag(label: HTMLElement, labelTextObj: { value: string }) {
-			const strongTags = label.querySelectorAll('strong');
-			strongTags.forEach((strong) => {
-				const strongText = strong.innerText;
-				labelTextObj.value = labelTextObj.value.replace(strongText, `**${strongText}**`);
-			});
-		}
-
-		function checkChildrenEmTag(label: HTMLElement, labelTextObj: { value: string }) {
-			const emTags = label.querySelectorAll('em');
-			emTags.forEach((em) => {
-				const emText = em.innerText;
-				labelTextObj.value = labelTextObj.value.replace(
-					`(?<!<[^>]*>)(${emText})(?!<\/[^>]*>)`,
-					`*$1*`
-				);
-			});
 		}
 	};
 
@@ -428,8 +367,8 @@ export default class ReadAssistance extends MarkdownRenderChild {
 				textInput.removeEventListener('input', () => adjustInputWidth(textInput));
 				textInput.removeEventListener('keyup', this.onInputKeyUp);
 				textInput.removeEventListener('click', this.onInputClick);
-				textInput.removeEventListener('mousedown', () => {
-					this.setLabelBgColor(label.classList.contains('sentence'), label);
+				textInput.removeEventListener('mousedown', (event) => {
+					event.stopPropagation();
 				});
 				textInput.removeEventListener('mouseup', () => {
 					label.removeAttribute('style');

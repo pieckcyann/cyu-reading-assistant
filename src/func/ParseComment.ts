@@ -15,15 +15,17 @@ export function iterateLabelsAndInputs(
 	callback: (
 		label: HTMLLabelElement,
 		textInput: HTMLInputElement,
-		allChildElements: HTMLElement[]
+		allChildElements: HTMLElement[],
+		childLabels: HTMLLabelElement[]
 	) => void
 ) {
 	const labels = containerEl.findAll('label') as HTMLLabelElement[];
 	for (const label of labels) {
 		const textInputs = label.findAll('input') as HTMLInputElement[];
+		const childLabels = label.findAll('label') as HTMLLabelElement[];
 		const allChildElements = Array.from(label.children) as HTMLElement[];
 		// console.log(label.textContent + '\n -> \n' + textInputs[textInputs.length - 1].value);
-		callback(label, textInputs[textInputs.length - 1], allChildElements);
+		callback(label, textInputs[textInputs.length - 1], allChildElements, childLabels);
 	}
 }
 
@@ -48,9 +50,13 @@ export function parseFieldsFromPreview(
 		const directDels = Array.from(previewLabel.children).filter(
 			(child) => child.tagName === 'DEL'
 		) as HTMLElement[];
+		const grandchildrenDels = Array.from(
+			previewLabel.findAllSelf('label > strong > em > del')
+		) as HTMLInputElement[];
+		const dels = [...directDels, ...grandchildrenDels];
 
-		if (directDels.length > 0) {
-			for (const del of directDels) {
+		if (dels.length > 0) {
+			for (const del of dels) {
 				previewWord = del.getAttribute('data-prototype') || previewWord;
 			}
 		} else if (previewLabel.classList.contains('sentence')) {
@@ -74,6 +80,7 @@ export function parseFieldsFromPreview(
 			// const lastInput = inputs[inputs.length - 1];
 			// previewMeaning = lastInput.value;
 		}
+		previewWord = previewWord.replace(/(\[\d{1,3}\])/g, '');
 		callback(previewLabel, previewWord, previewMeaning);
 	}
 }
@@ -100,13 +107,19 @@ export async function parseFieldsFromSource(
 	const regExpText = `(?:(?!<[^>]+>).)*?`;
 	const regAnkiId = `(?:\\s+data-anki-id=["'](\\d+)["'])?`;
 
-	const regExpSingleWord = new RegExp(
-		`<label${regAnkiId}>(${regExpText})<input value=["']([^"']+)["']><\\/label>`,
+	const regExpSingleWordDoubleQuoteSentence = new RegExp(
+		`<label${regAnkiId}>(${regExpText})<input value=["]([^"]+)["]><\\/label>`,
+		'gm'
+	);
+
+	const regExpSingleWordSingleQuoteSentence = new RegExp(
+		`<label${regAnkiId}>(${regExpText})<input value=[']([^']+)[']><\\/label>`,
 		'gm'
 	);
 
 	const regExpNestedWord = new RegExp(
-		`<label${regAnkiId} class="nested">([\\s\\S]*?)<input value=["']([^"']+)["'] class="nested">\\s*<\\/label>`,
+		`<label${regAnkiId} class="nested">([\\s\\S]*?)<input value=["']([^"']+)["'] class="nested">\\s*?<\\/label>`,
+		// `<label${regAnkiId} class="nested">(${regExpText})<input value=["']([^"']+)["'] class="nested">\\s*<\\/label>`,
 		'gm'
 	);
 
@@ -129,7 +142,10 @@ export async function parseFieldsFromSource(
 		const matches: FieldData[] = [];
 
 		// <label>meaning<input value="word"></label>
-		const signleWordMatches = lineContent.matchAll(regExpSingleWord);
+		const signleWordMatches = [
+			...lineContent.matchAll(regExpSingleWordDoubleQuoteSentence),
+			...lineContent.matchAll(regExpSingleWordSingleQuoteSentence),
+		];
 		for (const match of signleWordMatches) {
 			if (match[2] && match[3]) {
 				const isExistAnki = !!match[1];

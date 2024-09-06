@@ -64,7 +64,7 @@
   background-color: var(--interactive-normal);
 }
 .flash-card-div .flash-card-wrapper .item-count {
-  font-family: Archivo, "手札体-简";
+  font-family: 'Dancing Script', 'Carattere', 'Harlow Solid', '汉仪状元行';
   margin-bottom: 10px;
   margin-left: 2rem;
   text-align: left;
@@ -215,15 +215,22 @@ span.ra-count-display {
 .mod-header + div + div > h6 > div > span.ra-count-display:hover {
   box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, 0.042), 0px 5px 20px rgba(0, 0, 0, 0.07);
 }
-label > span.ra-star:not(:has(*))::before {
+.reading.p label > span.ra-star:not(:has(*))::before {
   content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='0.65em' height='0.65em' viewBox='0 0 48 48'%3E%3Cpath fill='%23efefe8' stroke='%230072d0' stroke-linejoin='round' stroke-width='4' d='M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z'/%3E%3C/svg%3E");
   position: absolute;
   pointer-events: none;
   top: -22px;
   left: calc(-2rem - 5px);
 }
-:is(li) > label > span.ra-star:not(:has(*))::before {
+.reading:not(.p) label > span.ra-star:not(:has(*))::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='0.65em' height='0.65em' viewBox='0 0 48 48'%3E%3Cpath fill='%23efefe8' stroke='%230072d0' stroke-linejoin='round' stroke-width='4' d='M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z'/%3E%3C/svg%3E");
+  position: absolute;
+  pointer-events: none;
+  top: -22px;
   left: -5px;
+}
+section.footnotes span.ra-star::before {
+  left: -5px !important;
 }
 .row .ra-star:not(:has(*))::before {
   content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='0.65em' height='0.65em' viewBox='0 0 48 48'%3E%3Cpath fill='%23efefe8' stroke='%230072d0' stroke-linejoin='round' stroke-width='4' d='M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z'/%3E%3C/svg%3E");
@@ -240,42 +247,49 @@ strong label,
   font-weight: var(--bold-weight);
   color: var(--bold-color);
 }
+.delUnderline {
+  background: repeating-linear-gradient(to right, #f9f5e9, #f9f5e9 4px, transparent 4px, transparent 12px) no-repeat right bottom;
+  background-size: 100% 2px;
+  background-position-x: left;
+}
 label {
   padding: 1px;
   border: none;
   cursor: pointer;
   position: relative;
-  font-weight: var(--normal-weight);
+  padding-bottom: 2px;
   white-space: normal;
   word-wrap: break-word;
   color: var(--text-normal);
+  font-weight: var(--normal-weight);
+  transition: background-color 150ms ease, background-size 500ms;
+  background-color: #ecefe8 !important;
+  background: linear-gradient(to right, rgba(0, 114, 208, 1), rgba(0, 114, 208, 1)) no-repeat right bottom;
+  background-size: 0 2px;
+  transition: background-size 250ms;
+}
+label.label-active {
   border-bottom: 1px solid rgba(0, 114, 208, 1);
-  transition: background-color 0.15s ease;
+  background-color: rgba(0, 114, 208, 0.5) !important;
+}
+label.underline-expand {
+  transition: background-size 500ms;
+  background-position-x: left;
+  background-size: 100% 2px;
 }
 label span:not(.ra-star) {
   position: relative;
 }
-label.located {
-  background-color: aqua;
-}
 label del {
-  text-decoration: none;
-  background-color: #f9f5e9;
-  border-bottom: 2px solid transparent;
   position: relative;
+  padding-bottom: 2px;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
 }
-label del::after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 1px;
-  background-image: linear-gradient(to right, rgba(0, 114, 208, 1) 0%, rgba(0, 114, 208, 1) 50%, transparent 50%);
-  background-size: 5px 2px;
-  background-repeat: repeat-x;
-  margin: 0 auto;
-  top: 100%;
-  left: 0;
-  transform: translateY(1px);
+label.wordLabelDel:not(.sentence) del {
+  background: repeating-linear-gradient(to right, #f9f5e9, #f9f5e9 4px, transparent 4px, transparent 12px) no-repeat right bottom;
+  background-size: 100% 2px;
+  background-position-x: left;
 }
 label input[type="text"] {
   --size-4-2: 14px;
@@ -316,8 +330,20 @@ label input[type="text"]:active {
   box-shadow: none;
 }
 label.sentence {
+  background-color: rgba(199, 43, 108, 0.06);
+  background-color: rgba(199, 43, 108, 0.06) !important;
+  background: linear-gradient(to right, rgba(199, 43, 108, 1), rgba(199, 43, 108, 1)) no-repeat right bottom;
+  background-size: 0 2px;
+  transition: background-size 250ms;
+}
+label.sentence.underline-expand {
+  transition: background-size 500ms;
+  background-position-x: left;
+  background-size: 100% 2px;
+}
+label.sentence.label-active-sentence {
   border-bottom: 1px solid rgba(199, 43, 108, 1);
-  user-select: auto;
+  background-color: rgba(199, 43, 108, 0.5) !important;
 }
 label.sentence:hover del {
   background-color: transparent;

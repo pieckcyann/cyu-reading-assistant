@@ -131,134 +131,22 @@ async function addCommentInFile({
 // 替换源码模式下文本
 export async function updateInputValueInFile(
 	app: App,
-	labelText: string,
 	oldValue: string,
-	newValue: string,
-	isSentence: boolean,
-	isNested: boolean,
-	ankidID: string | null
+	newValue: string
 ): Promise<void> {
 	const file = this.app.workspace.getActiveFile();
 	if (!file) return;
 
 	const oldFileContent = await app.vault.read(file);
-	let completeLabel = getRegexForLabel(
-		labelText,
-		oldValue,
-		isSentence,
-		isNested,
-		ankidID
-	);
-	if (!completeLabel) {
-		new Notice(`警告：未找到对应的label标签文本`);
-	}
+	const newFileContent = oldFileContent.replace(oldValue, newValue);
 
-	const newFileContent = oldFileContent.replace(
-		completeLabel,
-		completeLabel.replace(oldValue, newValue)
-	);
 	if (oldFileContent == newFileContent) {
-		new Notice(`尝试修改笔记内容失败。。。`);
-		console.log('labelText: ' + labelText);
-		console.log('completeLabel: ' + completeLabel);
+		new Notice(`Warning: 尝试修改笔记内容失败...`);
 		return;
 	}
 
 	await app.vault.modify(file, newFileContent);
-	new Notice(`笔记内容已修改！`);
-
-	/*
-	const linkRegex = /\[([^\]]+)\]\(\)/g;
-	// const footnoteRegex = /\[\^(\d+)\]/g
-
-	if ((fileContent.match(regex) || []).length < 1) {
-		let linkMatch;
-		while ((linkMatch = linkRegex.exec(fileContent)) !== null) {
-			const linkText = linkMatch[1];
-			if (labelText.includes(linkText)) {
-				labelText = labelText.replace(linkText, `[${linkText}]()`);
-			}
-		}
-
-		// 检测 footnote 格式并替换
-		// let footnoteMatch;
-		// while ((footnoteMatch = footnoteRegex.exec(fileContent)) !== null) {
-		//     const footnoteText = footnoteMatch[1];
-		//     if (labelText.includes(footnoteText)) {
-		//         labelText = labelText.replace(footnoteText, `[^${footnoteText}]`);
-		//         new Notice(footnoteText);
-		//     }
-		// }
-
-		// regex = getRegexForLabel(labelText, oldValue, labelClass);
-	}
-	*/
-
-	// const regAnkiId = `(?:\\s+data-anki-id=["'](\\d+)["'])?`;
-	// ${regAnkiId}
-
-	// const newFileContent = fileContent.replace(
-	// 	regex,
-	// 	`<label${regAnkiId}${labelClass}>${labelText}<input value=${quoteType}${newValue}${quoteType}${labelClass}></label>`
-	// );
-
-	/**
-	 * 用于拼凑完整的label标签，无论是否嵌套
-	 * @param labelText 可能是文本，可能包含嵌套的del或label
-	 * @param oldValue
-	 * @param isSentence
-	 * @param isNested
-	 * @param ankidID
-	 * @returns
-	 */
-	function getRegexForLabel(
-		labelText: string,
-		oldValue: string,
-		isSentence: boolean,
-		isNested: boolean,
-		ankidID: string | null
-	): string {
-		const labelClass = generateLabelRegex(isSentence, isNested, ankidID);
-		let inputClass = '';
-		if (isSentence) {
-			inputClass = ' class="sentence"';
-		} else if (isNested) {
-			inputClass = ' class="nested"';
-		}
-		let quoteType;
-		oldValue.includes('"') ? (quoteType = `'`) : (quoteType = `"`);
-		// 还原 footnote
-		labelText = labelText.replace(/\[(\d{1,3})\]/g, '[^$1]');
-		return `<label${labelClass}>${labelText}<input value=${quoteType}${oldValue}${quoteType}${inputClass}></label>`;
-	}
-
-	function generateLabelRegex(
-		isSentence: boolean,
-		isNested: boolean,
-		ankidID: string | null
-	): string {
-		let classPart = '';
-		if (isSentence) {
-			classPart = 'class="sentence"';
-		} else if (isNested) {
-			classPart = 'class="nested"';
-		}
-
-		let ankiIdPart = '';
-		if (ankidID) ankiIdPart = `data-anki-id="${ankidID}"`;
-
-		let labelClass = '';
-
-		if (classPart && ankiIdPart) {
-			// Both attributes
-			labelClass += ` ${ankiIdPart} ${classPart}`;
-		} else if (classPart || ankiIdPart) {
-			// One attribute
-			labelClass += ` ${classPart}${ankiIdPart}`;
-		}
-
-		return labelClass;
-	}
+	new Notice(`Success: 笔记内容已修改！`);
 }
 
 export async function addAnkiID({

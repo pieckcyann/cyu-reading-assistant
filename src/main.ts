@@ -145,13 +145,19 @@ export default class ReadAssistPlugin extends Plugin {
 		createTopDiv(activeLeafView.containerEl);
 		const topDiv = activeLeafView.containerEl.find('.flash-card-div');
 		const root = createRoot(topDiv);
+
 		// 从文件内容中提取出单词列表
 		let wordDataArray: FieldData[] = [];
 		await parseFieldsFromSource(this.app, this.settings, (array) => {
 			wordDataArray = array;
 		});
+
+		// 统计遗漏单词数
+		const activeFileText = activeLeafView.currentMode.get();
+		const lostWordsCount = (activeFileText.match(/<\/label>/g) || []).length;
+
 		// 新建单词列表组件并挂载
-		const wrapper = createWrapper(this, activeLeafView, wordDataArray);
+		const wrapper = createWrapper(this, activeLeafView, wordDataArray, lostWordsCount);
 		root.render(wrapper);
 	};
 
@@ -163,8 +169,6 @@ export default class ReadAssistPlugin extends Plugin {
 		// const scrollPosition = await getScrollTopWrapper(this)
 		const scrollPosition = 482;
 
-		const activeFileText = activeLeafView.currentMode.get();
-
 		createTopDiv(activeLeafView.containerEl);
 		const topDiv = activeLeafView.containerEl.find('.flash-card-div');
 		const root = createRoot(topDiv);
@@ -173,7 +177,9 @@ export default class ReadAssistPlugin extends Plugin {
 		await parseFieldsFromSource(this.app, this.settings, (array) => {
 			wordDataArray = array;
 		});
-		const wrapper = createWrapper(this, activeLeafView, wordDataArray);
+		const activeFileText = activeLeafView.currentMode.get();
+		const lostWordsCount = (activeFileText.match(/<\/label>/g) || []).length;
+		const wrapper = createWrapper(this, activeLeafView, wordDataArray, lostWordsCount);
 		root.render(wrapper);
 
 		const wrapper1 = activeLeafView.containerEl.find('.flash-card-wrapper');
@@ -268,6 +274,23 @@ export default class ReadAssistPlugin extends Plugin {
 
 				const em = new ExportManager(this.app, this.settings, activeFileText);
 				em.exportAllWordsToAnki();
+			},
+		});
+
+		this.addCommand({
+			id: 'show-or-hide-all-the-cloze-words',
+			name: '显示/隐藏出所有完形填空的单词',
+			callback: () => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) return;
+				const clozeEl = view.containerEl.findAll('strong > em');
+				if (clozeEl?.length == 0) {
+					new Notice('Warning: 本页未找到任何完形填空');
+					return;
+				}
+				for (const em of clozeEl) {
+					em.classList.toggle('cloze-hover');
+				}
 			},
 		});
 	}
