@@ -28,9 +28,6 @@
   background-color: #f0f0f0;
   font-weight: bold;
 }
-.cyu-popup-menu {
-  left: 10rem !important;
-}
 .flash-card-div .flash-card-wrapper {
   margin: 0 0 0 -1.5rem;
   padding: 0 10px 0 0;
@@ -277,6 +274,10 @@ label.underline-expand {
   background-position-x: left;
   background-size: 100% 2px;
 }
+label.underline-expand strong > em {
+  background-size: 0% 1.5px;
+  background-position-x: right;
+}
 label span:not(.ra-star) {
   position: relative;
 }
@@ -340,6 +341,10 @@ label.sentence.underline-expand {
   transition: background-size 500ms;
   background-position-x: left;
   background-size: 100% 2px;
+}
+label.sentence.underline-expand strong > em {
+  background-size: 0% 1.5px;
+  background-position-x: right;
 }
 label.sentence.label-active-sentence {
   border-bottom: 1px solid rgba(199, 43, 108, 1);

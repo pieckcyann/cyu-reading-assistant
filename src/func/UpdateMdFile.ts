@@ -3,7 +3,6 @@ import { PromptModal } from '../components/PromptModal';
 import { TemplaterError } from 'utils/Error';
 import { AnkiConnectNote } from 'interfaces/note-interface';
 import { sourceTextToFieldWord } from 'utils/StringReplace';
-import { notice } from 'utils/Notice';
 // import escapeHTML from 'escape-html';
 
 export function addCommentForSource({
@@ -169,12 +168,21 @@ export async function addAnkiID({
 
 	const regExpText = `(?:(?!<[^>]+>).)*`;
 
-	const regExpSingleWord = new RegExp(
-		`(<label)(>${regExpText}<input value=["'][^"']+["']><\\/label>)`,
+	// const regExpSingleWord = new RegExp(
+	// 	`(<label)(>${regExpText}<input value=["'][^"']+["']><\\/label>)`,
+	// 	'gm'
+	// );
+	const regExpSingleWordDoubleQuoteSentence = new RegExp(
+		`(<label)(>${regExpText}<input value=["][^"]+["]><\\/label>)`,
+		'gm'
+	);
+
+	const regExpSingleWordSingleQuoteSentence = new RegExp(
+		`(<label)(>${regExpText}<input value=['][^']+[']><\\/label>)`,
 		'gm'
 	);
 	const regExpNestedWord = new RegExp(
-		`(<label)( class="nested">[\\s\\S]*?<input value=["'][^"']+["'] class="nested">\\s*<\\/label>)`,
+		`(<label)( class="nested">[\\s\\S]*?<input value=["'][^"']+["'] class="nested">\\s*?<\\/label>)`,
 		'gm'
 	);
 	const regExpDoubleQuoteSentence = new RegExp(
@@ -191,15 +199,13 @@ export async function addAnkiID({
 		'gm'
 	);
 
-	let n = 0;
-
 	function matchAndReplace(regex: RegExp, index: number): boolean {
 		const matches: Array<RegExpMatchArray> = Array.from(newFileContent.matchAll(regex));
 		let finished = false;
 
 		if (!regex.toString().includes('<del')) {
 			for (const match of matches) {
-				let matchWord = sourceTextToFieldWord(match[0]);
+				const matchWord = sourceTextToFieldWord(match[0]);
 
 				const word = notes_to_new[index].fields.Word;
 
@@ -214,7 +220,7 @@ export async function addAnkiID({
 			}
 		} else {
 			for (const match of matches) {
-				let matchWord = match[3];
+				const matchWord = match[3];
 				const word = notes_to_new[index].fields.Word;
 				if (matchWord === word) {
 					newFileContent = newFileContent.replace(
@@ -232,8 +238,13 @@ export async function addAnkiID({
 
 	for (let i = 0; i < notes_to_new.length; i++) {
 		// const labelWithDelRegex = new RegExp(`(<label)(<del data-prototype="`, 'gm');
-		if (matchAndReplace(regExpSingleWord, i)) continue;
+
+		// if (matchAndReplace(regExpSingleWord, i)) continue;
 		if (matchAndReplace(regExpNestedWord, i)) continue;
+
+		if (matchAndReplace(regExpSingleWordDoubleQuoteSentence, i)) continue;
+		if (matchAndReplace(regExpSingleWordSingleQuoteSentence, i)) continue;
+
 		if (matchAndReplace(regExpDoubleQuoteSentence, i)) continue;
 		if (matchAndReplace(regExpSingleQuoteSentence, i)) continue;
 		if (matchAndReplace(regExpNonPrototype, i)) continue;
@@ -241,6 +252,6 @@ export async function addAnkiID({
 
 	if (newFileContent != oldfileContent) {
 		await this.app.vault.modify(file, newFileContent);
-		new Notice('已向笔记中添加了 Anki ID');
+		new Notice(`Success: 已向笔记中添加了 Anki ID !`);
 	}
 }

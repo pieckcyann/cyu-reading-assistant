@@ -214,7 +214,12 @@ export class ExportManager {
 		isSentence: boolean;
 	}): PartOfSpeech {
 		const regex =
-			/(n\.|adj\.|v\.|adv\.|pron\.|prep\.|conj\.|int\.|art\.|abbr\.)(\s|[\u4e00-\u9fa5])/;
+			/(n\.|adj\.|v\.|vi\.|vt\.|adv\.|pron\.|prep\.|conj\.|int\.|art\.|abbr\.)(\s|[\u4e00-\u9fa5])/;
+
+		// const words = meaning.match(/\b[\w'-]+\b/g);
+		// if (words && words.length >= 2) {
+		// 	return 'Phrase';
+		// }
 
 		if (isSentence) {
 			return 'Sentence';
@@ -274,6 +279,17 @@ export class ExportManager {
 			this.notes_to_new_id = addNoteResponses.map(
 				(addNoteResponse) => addNoteResponse.result
 			);
+
+			if (this.notes_to_new.length) {
+				this.Log(`INFO: Anki 更改了 ${addNoteResponses.length} 条数据`);
+			}
+
+			for (const id of this.notes_to_new) {
+				if (!id) {
+					this.Log(`Warning: anki 返回的 id 中存在 null 值！！！`);
+					return;
+				}
+			}
 
 			await addAnkiID({
 				notes_to_new: this.notes_to_new,

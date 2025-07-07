@@ -384,7 +384,7 @@ export default class ReadAssistance extends MarkdownRenderChild {
 	}
 
 	wordSpeak(word: string) {
-		var speech = new SpeechSynthesisUtterance();
+		const speech = new SpeechSynthesisUtterance();
 		speech.text = word;
 		speech.volume = 1; // 音量 0 to 1
 		speech.rate = 1; // 语速 0.1 to 9
